@@ -1,0 +1,66 @@
+/* 固定讓卡片＋側欄左右排 */
+.products-layout{
+  display:flex !important;     /* ← 關鍵，加 !important 保證不被覆蓋 */
+  align-items:flex-start;
+  gap:40px;
+}
+
+.product-grid{flex:1;}
+.prod-sidebar{
+  width:260px;
+  position:sticky;top:120px;
+}
+
+/* 平板以下自動隱藏 */
+/*@media(max-width:991px){
+  .prod-sidebar{display:none;}
+}*/
+
+/* ===== MacroSilicon 介紹區 ===== */
+.ms-company{padding:60px 0}
+.ms-title{font-size:42px;font-weight:700;color:#444}
+.ms-sub  {font-size:24px;font-weight:700;color:#555;margin-bottom:20px}
+.ms-btn{
+  font-size:24px;font-weight:700;padding:18px 40px;border-radius:6px;
+  background:#0087c4;border:none
+}
+
+/* 藍色 IC 標籤 */
+.ms-chip-wrap{display:flex;flex-wrap:wrap;gap:14px;margin-top:25px}
+.ms-chip{
+  display:inline-block;padding:10px 22px;border-radius:6px;
+  background:#5b93f5;color:#fff;font-size:20px;font-weight:700;
+  text-decoration:none;transition:.2s
+}
+.ms-chip:hover{background:#2c6cf0;text-decoration:none}
+
+/* RWD：手機排列 */
+@media(max-width:767px){
+  .ms-chip{font-size:18px}
+}
+
+/* ① 讓描述文字有淡灰底＆圓角 */
+.ms-company .desc-box{
+  display:inline-block;          /* 讓背景包住文字長度 */
+  background:#f4f6f8;            /* 淡灰，可自行換色 */
+  padding:10px 18px;
+  border-radius:6px;
+  color:#444;                    /* 文字改成深灰提高可讀性 */
+}
+
+/* ② 膠囊按鈕：藍底＋hover 變深＋陰影 */
+.ms-chip{
+  display:inline-block;
+  padding:10px 24px;
+  background:#0278ff;            /* 你的主色 */
+  color:#fff;
+  font-weight:700;
+  border-radius:30px;
+  text-decoration:none;
+  box-shadow:0 3px 6px rgba(0,0,0,.15);
+  transition:.2s;
+}
+.ms-chip:hover{
+  background:#005fd4;           /* hover 深一階 */
+  transform:translateY(-2px);
+}
