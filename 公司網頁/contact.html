@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contact │ Lin-K Technology</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="assets/css/index.css">
+
+<style>
+/* ── HERO ───────────────────── */
+.hero{
+  background:url("assets/images/contact-hero.jpg") center/cover no-repeat;
+  padding:120px 0 80px;text-align:center;color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.45);
+}
+.hero h1{font-size:54px;font-weight:800;margin:0}
+
+/* ── 主要內容 ───────────────── */
+.contact-main{padding:80px 0}
+.contact-main h2{font-size:32px;font-weight:700;margin-top:0}
+.contact-main p , .contact-main li{font-size:18px;line-height:1.7}
+
+/* 表單簡易美化 */
+.contact-form .form-control{border-radius:4px;font-size:16px}
+.contact-form .btn{
+  background:#0278ff;color:#fff;font-weight:700;border:0;
+  padding:10px 28px;border-radius:6px;transition:.2s}
+.contact-form .btn:hover{background:#005fd4}
+
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#555!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+
+/* ============== 手機專用 (≤767px，Bootstrap xs) ============== */
+@media (max-width: 767px) {
+  /* HERO 區域 */
+  .hero { padding: 60px 0 50px; }        /* 上下留白少一點 */
+  .hero h1 { font-size: 32px; }
+
+  /* 主要內容 */
+  .contact-main { padding: 50px 15px; }  /* 兩側保留 15px 與 .container 一致 */
+  .contact-main h2 { font-size: 26px; }
+  .contact-main p,
+  .contact-main li { font-size: 16px; }
+
+  /* Google Map 最低高度，避免被壓扁 */
+  .contact-main iframe { min-height: 260px; }
+}
+
+ /* ====== 版頭區塊 ====== */
+.main-header      { background:#fff; padding:24px 0; border-bottom:1px solid #ddd; }
+.header-inner     { display:flex; align-items:center; }   /* 使 logo 與 nav 同列 */
+.brand-logo img   { width:140px; height:auto; margin-right:20px; }  /* logo 大小 & 間距 */
+
+/* ====== 關鍵：UL 也用 flex，且 nowrap ====== */
+.nav-wrapper      { flex:1; }          /* 佔滿剩餘寬度 */
+.nav-wrapper .nav {
+  display:flex;          /* 橫向排版 */
+  flex-wrap:nowrap;      /* 不允許自動換行，超寬時會產生水平卷軸 */
+  justify-content:center;/* 置中整列導覽 */
+  margin:0; padding:0;   /* 清掉 Bootstrap 預設 UL 邊距 */
+}
+
+.nav-wrapper .nav > li {
+  float:none;            /* 取消 Bootstrap 的 float:left */
+  list-style:none;       /* 去除點點 */
+}
+
+.nav-wrapper .nav > li > a {
+  font-size:16px;
+  padding:12px 18px;     /* 連結內邊距 */
+
+}
+/* ====== Logo ====== */
+.navbar-logo img{
+  height:40px;              /* 調整成你想要的高度 */
+  width:auto;
+  display:inline-block;
+  vertical-align:middle;    /* 與文字垂直置中 */
+  margin-right:8px;         /* 與公司名稱留空隙 */
+}
+
+/* 公司名稱保持 inline-block，好跟 logo 同列 */
+.brand-text{
+  display:inline-block;
+  vertical-align:middle;
+}
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#ffffff!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+/* ---------- 共用 reset ---------- */
+.container-fluid{ padding-left:0; padding-right:0; }   /* 貼齊左右邊 */
+.navbar-header { display:flex; align-items:center; }   /* logo + 文字同列 */
+.navbar-logo img{ display:block; width:auto; margin-right:8px; }
+
+/* ---------- ① Mobile: ≤ 767px ---------- */
+.navbar-logo img{ height:28px; }               /* logo 高度 */
+.navbar-brand  { font-size:18px; margin:0; }   /* 公司名稱字體 */
+.nav.navbar-nav > li > a{
+  font-size:14px;
+  padding:8px 12px;
+}
+
+/* ---------- ② Tablet: 768–1199px ---------- */
+@media (min-width:768px){
+  .navbar-logo img{ height:36px; }
+  .navbar-brand  { font-size:22px; }
+  .nav.navbar-nav > li > a{
+    font-size:16px;
+    padding:10px 16px;
+  }
+}
+
+/* ---------- ③ Desktop: ≥ 1200px ---------- */
+@media (min-width:1200px){
+  .navbar-logo img{ height:44px; }
+  .navbar-brand  { font-size:26px; }
+  .nav.navbar-nav > li > a{
+    font-size:18px;
+    padding:12px 20px;
+  }
+}
+
+/* ---------- 導覽列高度（視需要） ---------- */
+.navbar{
+  padding-top:6px;    /* Mobile 預設 */
+  padding-bottom:6px;
+}
+@media (min-width:768px){
+  .navbar{ padding-top:10px; padding-bottom:10px; }
+}
+@media (min-width:1200px){
+  .navbar{ padding-top:14px; padding-bottom:14px; }
+}
+/* logo 高度 28~44px 斷點式範例：前面回答給過，可再貼一次 */
+.navbar-logo img{ height:28px; width:auto; margin-right:8px; }
+
+/* 行動裝置小於 768px 時，讓品牌文字自動縮行或隱藏部分 */
+/* 共用：為品牌文字指定較窄的字型 */
+.navbar-brand{
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif;
+  font-variant-east-asian: proportional-width; /* 拉丁符號自動半形化 */
+}
+
+.navbar-brand{
+  font-family:'Noto Sans TC','PingFang TC',sans-serif;
+  font-stretch:100%;          /* 75% ≈ 0.75 寬度 */
+}
+
+/* 手機寬度再進一步擠緊 */
+@media (max-width:1000px){
+  .navbar-brand{
+    font-size:19px;
+    max-width:1000px;          /* 避免擠到漢堡 */
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    letter-spacing:-1px;    /* 輕微負值就有感 */
+    display:inline-block;    /* scale 需脫離 inline 流 */
+    transform:scaleX(.6);    /* 再壓 10% */
+    transform-origin:left;
+  }
+}
+</style>
+</head>
+
+<body>
+
+  <!-- ▸ 導覽列（沿用你的 nav） -->
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid px-reset"> <!-- 左右貼邊，若不要可拿掉 px-reset -->
+    <!-- ====== Navbar Header：Logo + Brand + Toggle ====== -->
+    <div class="navbar-header d-flex">
+
+      <!-- 1. Logo -->
+      <a href="index.html" class="navbar-logo">
+        <img src="assets/images/logo1.jpg" alt="Lin‑K logo">
+      </a>
+
+      <!-- 2. 漢堡按鈕：手機/窄螢幕顯示 -->
+      <button type="button"
+              class="navbar-toggle collapsed"
+              data-toggle="collapse"
+              data-target="#main-nav">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+
+      <!-- 3. 公司名稱 -->
+      <a class="navbar-brand" id="coco" href="index.html">
+        零刻科技股份有限公司
+      </a>
+    </div><!-- /.navbar-header -->
+
+    <!-- ====== 折疊內容：點漢堡展開/收合 ====== -->
+    <div id="main-nav" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="index.html">About</a></li>
+
+        <!-- Products 下拉 -->
+        <li class="dropdown">
+        <!-- ① 直接跳到產品總覽 -->
+        <a href="products.html">Products</a>
+        
+        <!-- ② 只負責下拉 -->
+        <a href="#" class="dropdown-toggle caret-btn" data-toggle="dropdown">
+          <span class="caret"></span>
+        </a>
+        
+        <ul class="dropdown-menu">
+          <li><a href="products/HDMI.html">HDMI</a></li>
+          <li><a href="products/DP.html">DP</a></li>
+          <li><a href="products/USB.html">USB</a></li>
+          <li><a href="products/Type-C.html">Type‑C</a></li>
+          <li><a href="products/SystemDesign.html">System Design</a></li>
+        </ul>
+        </li>
+
+        <li><a href="macrosilicon.html">MacroSilicon&nbsp;IC</a></li>
+        <li><a href="application.html">Application&nbsp;video</a></li>
+
+        <li><a href="download.html">Download</a></li>
+
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+<section id="main" class="main-header">
+</section>
+
+<section id="main" class="main-header">
+</section>
+
+
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <h1 style="color: #444;">Contact Us</h1><br>
+    <br>
+    <br>
+    <li style="color: #080707aa; font-size: 18px;">零刻科技股份有限公司成立於2015年。<br>
+        零刻科技股份有限公司成立於2015年，由一群對影音技術充滿熱情的專業人士所創立。<br>
+        我們專注於影音系統解決方案的開發與銷售，致力於提供穩定、高效能的產品及技術支援服務，協助客戶打造最佳的影音體驗。<br>
+        也是宏晶微電子在台灣唯一指定IC代理商!<br>
+        我們提供完整的IC與模組解決方案，涵蓋擷取卡、Converter、Splitter、Matrix等多種產品，廣泛應用於視訊監控、直播、會議系統、教育訓練及工業整合等場域。<br>
+        除此之外，零刻科技具備自主研發能力，推出了多款自有設計的專業產品，<br>
+        如 DP 1.4 Emulator、HDMI 2.1 Emulator、DVI Emulator 及 USB 3.0 Sharing Switch，這些產品廣泛應用於訊號模擬、設備測試、系統驗證與自動化控制等領域，並且深受工程師及專業用戶的信賴。</li>
+  </div>
+</header>
+
+<!-- 主要內容 -->
+<section class="contact-main container">
+  <div class="row">
+    <!-- 左：聯絡資訊 -->
+    <div class="col-md-5">
+      <h2>Lin-K Technology Co., Ltd.</h2>
+      <ul class="list-unstyled">
+        <li><strong>地址：</strong>新北市林口區文化一路一段135巷18號1樓</li>
+        <li><strong>電話：</strong>+886-2-2600-3480</li>
+        <li><strong>傳真：</strong>+886-2-2608-2580</li>
+        <li><strong>Email：</strong><a href="mailto:sales@lin-ker.com">sales@lin-ker.com</a></li>
+        <li><strong>營業時間：</strong>Mon – Fri  09:00 – 18:00 (GMT+8)</li>
+      </ul>
+
+      <h3>Drop Us a Message</h3>
+      <!-- ★ Mailto 表單；若要後端，可改 action -->
+      <form class="contact-form"
+      action="https://formspree.io/f/xpwlzwyo"
+      method="POST">          <!-- ← 改成 POST -->
+      <input type="hidden" name="_subject" value="Website contact form">
+      <div class="form-group">
+        <input type="text"  name="name"  class="form-control" placeholder="Your Name"  required>
+      </div>
+      <div class="form-group">
+        <input type="email" name="email" class="form-control" placeholder="Your Email" required>
+      </div>
+      <div class="form-group">
+        <textarea name="message" rows="4" class="form-control" placeholder="Message" required></textarea>
+      </div>
+      <button type="submit" class="btn">Send</button>
+    </form>
+    </div>
+
+    <!-- 右：Google Map -->
+    <div class="col-md-7">
+      <h2>Find Us on Map</h2>
+      <div class="embed-responsive embed-responsive-16by9">
+        <!-- ★ 替換為自己的 Google Map 內嵌碼 -->
+        <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d7227.733445604293!2d121.37322400000001!3d25.072506!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442a6df6c5a5a19%3A0x4ba7c0716d0fb7f!2z6Zu25Yi756eR5oqA6IKh5Lu95pyJ6ZmQ5YWs5Y-4!5e0!3m2!1szh-TW!2stw!4v1750936817083!5m2!1szh-TW!2stw" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 共用 JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>
