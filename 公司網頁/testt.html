@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MacroSilicon IC | Lin-K Technology</title>
+
+  <!-- 共用樣式 -->
+  <link rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../assets/css/index.css">
+
+  <!-- 單頁補充樣式（若已放在 index.css，可刪） -->
+  <style>
+    /* ── HERO ─────────────────────────────── */
+    .hero{
+      background:url('../assets/images/ms-hero.jpg') center/cover no-repeat;
+      padding:120px 0 100px;
+      text-align:center;
+      color:#fffffff7;
+      text-shadow:0 2px 6px rgba(0,0,0,.45);
+    }
+    .hero h1{font-size:54px;font-weight:800;margin-bottom:10px;color:#444}
+    .hero p.lead{font-size:24px}
+
+    /* ── 內容排版 ─────────────────────────── */
+    .main{padding:60px 0}
+    .main h2{font-size:32px;font-weight:700;margin:60px 0 25px}
+    .main h3{font-size:26px;font-weight:700;margin:40px 0 18px}
+    .main p , .main li{font-size:18px;line-height:1.7}
+
+    /* ── 左側目錄 ─────────────────────────── */
+    .toc{position:sticky;top:110px;margin-top:40px}
+    .toc li+li{margin-top:20px}
+    .toc a{font-size:20px;color:#0080c9;text-decoration:underline}
+    .toc a:hover{text-decoration:none;color:#0062ff}
+
+    .back-link{margin:60px 0;display:inline-block;font-size:18px}
+
+    .ms-chip-wrap{
+        display:flex;
+        justify-content:center;
+        flex-wrap:wrap;
+        gap:20px;          /* ← 這行 */
+    }
+
+    /* ② 膠囊按鈕：藍底＋hover 變深＋陰影 */
+    .ms-chip{
+        display:inline-block;
+        padding:10px 24px;
+        background:#0278ff;            /* 你的主色 */
+        color:#fff;
+        font-weight:700;
+        border-radius:30px;
+        text-decoration:none;
+        box-shadow:0 3px 6px rgba(0,0,0,.15);
+        transition:.2s;
+    }
+    
+    .ms-chip:hover{
+        background:#005fd4;           /* hover 深一階 */
+        transform:translateY(-2px);
+    }
+
+    /* ① 讓描述文字有淡灰底＆圓角 */
+    .ms-company .desc-box{
+        display:inline-block;          /* 讓背景包住文字長度 */
+        background:#f4f6f8;            /* 淡灰，可自行換色 */
+        padding:10px 18px;
+        border-radius:8px;
+        color:#444;                    /* 文字改成深灰提高可讀性 */
+    }
+
+    .ms-black{ color:#000; }   /* 放在 index.css 最後即可 */
+
+    /* 讓左側 TOC 永遠固定在視窗左上方  */
+    @media (min-width: 992px){          /* 只在桌面版固定，手機自動跟著捲  */
+        .toc{
+            position: fixed !important;     /* ← 關鍵 */
+            top: 110px;                     /* 與導覽列間距，可自行調整  */
+            left: 40px;                     /* 視需要微調  */
+            width: 220px;                   /* 固定寬度，避免被內容撐開  */
+            z-index: 999;                   /* 確保不被內容蓋到           */
+        }
+    }
+    
+    /* 行動版（寬度 < 992px）維持預設，不固定 */
+    @media (max-width: 991px){
+        .toc{
+            position: static !important;    /* 回到正常文件流 */
+            width: auto; left: auto; top: auto;
+        }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top" role-="navigation" data-spy="affix" data-offset="10">
+        <div class="container-fluid">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header ">
+                
+                <button id="menu-toggle" class="burger-btn">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+                
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1" >
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="index.html">About</a>
+                    </li>
+
+                    <li class="has-sub">
+                        <a href="products.html">Products</a>
+                        <ul class="sub-menu">
+                            <li><a href="products/HDMI.html">HDMI</a></li>
+                            <li><a href="products/DP.html">DP</a></li>
+                            <li><a href="products/USB.html">USB</a></li>
+                            <li><a href="products/Type-C.html">Type-C</a></li>
+                            <li><a href="products/System%20Design.html">System&nbsp;Design</a></li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <a href="macrosilicon.html">MacroSilicon IC</a>
+                    </li>
+                    <li>
+                        <a href="#application video">Application video</a>
+                    </li>
+                    <li class="has-sub">
+                        <a href="#download">Download</a>
+                        <ul class="sub-menu">
+                            <li><a href="#driver">Driver</a></li>
+                            <li><a href="#papers">Papers</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="#contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+
+                <a class="navbar-brand" id="coco" href="#">Lin-K Technology </a>
+            <link rel="stylesheet"href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+            <!-- ② 你的自訂 CSS。檔名 / 路徑要跟 VS Code 的結構一致 -->
+            <link rel="stylesheet" href="assets/css/index.css">
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+<!-- ╔════ HERO ════╗ -->
+<header class="hero">
+  <div class="container">
+    <h1>MacroSilicon - IC&nbsp;Solution</h1>
+    <p class="lead">HDMI / DP / USB-C Bridge &amp; Capture Chipsets</p>
+    <a href="../products.html" class="btn btn-default">← Back to Product List</a>
+  </div>
+</header>
+
+<!-- ================== MacroSilicon 公司區 ================== -->
+<section class="ms-company container">
+  <div class="row">
+
+    <!-- 左欄：公司介紹 + 官方連結 -->
+    <div class="col-md-6">
+      <h2 class="ms-title">宏晶微電子科技股份有限公司</h2>
+      <h3 class="ms-sub">MacroSilicon Technology Co., Ltd.</h3>
+      <p class="desc-box ms-black">
+        零刻科技為宏晶微電子在台灣唯一指定 IC 代理商。</p>
+
+      <a href="http://en.macrosilicon.com/default.asp" target="_blank"
+         class="btn btn-primary ms-btn">
+        <span class="glyphicon glyphicon-info-sign"></span>
+        宏晶官網連結
+      </a>
+    </div>
+
+    <!-- 右欄：產品型號藍色標籤 -->
+    <div class="col-md-6">
+      <h2 class="ms-title hidden-md hidden-lg"
+          style="margin-top:60px">宏晶微電子科技股份有限公司</h2><!-- 手機才顯示 -->
+      <p class="desc-box">
+         從事積體電路設計與銷售……等。  零刻科技為宏晶微電子在台灣唯一指定 IC 代理商。
+        </p>
+
+      <!-- 型號集合 -->
+      <div class="ms-chip-wrap">
+        <!-- ↓ 直接複製 / 刪除 / 改 href 即可 -->
+        <a class="ms-chip" href="MSproducts/MS1826.html">MS1826</a>
+        <a class="ms-chip" href="MSproducts/MS1836S.html">MS1836S</a>
+        <a class="ms-chip" href="MSproducts/MS1858E.html">MS1858E</a>
+        <a class="ms-chip" href="MSproducts/MS2107.html">MS2107</a>
+        <a class="ms-chip" href="MSproducts/MS2109.html">MS2109</a>
+        <a class="ms-chip" href="MSproducts/MS2130.html">MS2130</a>
+        <a class="ms-chip" href="MSproducts/MS2131.html">MS2131</a>
+        <a class="ms-chip" href="MSproducts/MS9132.html">MS9132</a>
+        <a class="ms-chip" href="MSproducts/MS9282.html">MS9282</a>
+        <a class="ms-chip" href="MSproducts/MS9332.html">MS9332</a>
+        <a class="ms-chip" href="MSproducts/MS9333.html">MS9333</a>
+        <a class="ms-chip" href="MSproducts/MS9334.html">MS9334</a>
+        <a class="ms-chip" href="MSproducts/MS7024.html">MS7024</a>
+        <a class="ms-chip" href="MSproducts/MS9601A.html">MS9601A</a>
+      </div>
+    </div>
+
+  </div><!-- /.row -->
+</section>
+
+
+<!-- ╔════ 內容 ：左 TOC + 右說明 ════╗ -->
+<section class="container main">
+  <div class="row">
+
+    <!-- 左：章節索引 -->
+    <div class="col-sm-3">
+      <h2>主打IC介紹</h2>
+      <h2>【Converter】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS1836S.html">MS1836S</a></li>
+        <li><a href="MSproducts/MS1858E.html">MS1858E</a></li>
+        <li><a href="MSproducts/MS9282.html">MS9282</a></li>
+      </ul>
+      
+      <h2>【USB Capture】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS2107.html">MS2107</a></li>
+        <li><a href="MSproducts/MS2109.html">MS2109</a></li>
+        <li><a href="MSproducts/MS2130.html">MS2130</a></li>
+        <li><a href="MSproducts/MS2131.html">MS2131</a></li>
+      </ul>
+
+      <h2>【USB Screen thrower】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS9132.html">MS9132</a></li>
+      </ul>
+
+      <h2>【Splitter】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS9332.html">MS9332</a></li>
+        <li><a href="MSproducts/MS9333.html">MS9333</a></li>
+        <li><a href="MSproducts/MS9334.html">MS9334</a></li>
+      </ul>
+
+      <h2>【TV Encoder】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS7024.html">MS7024</a></li>
+      </ul>
+
+      <h2>【HDMI Video Processor】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MSproducts/MS1826.html">MS1826</a></li>
+      </ul>
+    </div>
+
+    <!-- 右：主內容 -->
+    <div class="col-sm-9">
+
+      <!-- Overview -->
+      <h2 id="series">主打IC介紹</h2>
+      <h2 id="series">MS1836S</h2>
+      <p class="desc-box ms-black">HDMI1.4/DVI1.0→CVBS/S-Video</p>
+      <img src="assets/images/MS1836S.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS1858E</h2>
+      <p class="desc-box ms-black">CVBS/S-Video→HDMI1.3/DVI1.0</p>
+      <img src="assets/images/MS1858E.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS2107</h2>
+      <p class="desc-box ms-black">CVBS/S-Video→USB2.0</p>
+      <img src="assets/images/MS2107.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS2130</h2>
+      <p class="desc-box ms-black">HDMI1.4/DVI1.0→USB2.0</p>
+      <img src="assets/images/MS2130.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS2131</h2>
+      <p class="desc-box ms-black">HDMI1.4/DVI1.0→USB3.0/HDMI1.4</p>
+      <img src="assets/images/MS2131.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS9132</h2>
+      <p class="desc-box ms-black">USB3.0→HDMI1.4/DVI1.0</p>
+      <img src="assets/images/MS9132.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS9282</h2>
+      <p class="desc-box ms-black">VGA/YPBPR→HDMI1.3/DVI1.0</p>
+      <img src="assets/images/MS9282.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS9332</h2>
+      <p class="desc-box ms-black">HDMI1.4→HDMI1.4/DVI1.0</p>
+      <img src="assets/images/MS9332.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS9333</h2>
+      <p class="desc-box ms-black">HDMI1.4→HDMI1.4/DVI1.0</p>
+      <img src="assets/images/MS9333.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+      <h2 id="series">MS9334</h2>
+      <p class="desc-box ms-black">HDMI1.4→HDMI1.4/DVI1.0</p>
+      <img src="assets/images/MS9334.png" class="img-responsive"
+           alt="MacroSilicon IC Series">
+
+    </div><!-- /.col -->
+
+  </div><!-- /.row -->
+
+  <!-- Contact -->
+      <h2 id="contact">Contact Us</h2>
+      <address>
+        Lin-K Technology Co., Ltd.<br>
+        地址：新北市林口區文化一路一段135巷18號1樓<br>
+        E-mail：<a href="mailto:sales@lin-ker.com">sales@lin-ker.com</a><br>
+        電話：+886-2-2600-3480
+      </address>
+
+</section>
+
+<!-- 共用 JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+$('a[href^="#"]').on('click',function(e){
+  e.preventDefault();
+  $('html,body').animate(
+    {scrollTop: $($(this).attr('href')).offset().top-90},500);
+});
+</script>
+</body>
+</html>
