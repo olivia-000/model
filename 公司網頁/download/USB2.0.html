@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>USB3.0 Capture │ Lin-K Technology</title>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="assets/css/index.css"><!-- 你的共用樣式 -->
+
+<style>
+/* HERO */
+.hero{
+  background:url("assets/images/usb3-hero.jpg") center/cover no-repeat;
+  padding:120px 0 90px;text-align:center;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.4);
+}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{
+  display:block;         /* 滑鼠一靠就顯示選單 */
+}
+.hero h1{font-size:54px;font-weight:800;margin:0 0 10px}
+.hero .lead{font-size:22px}
+
+/* 主內容 */
+.main{padding:80px 0}
+.main h2{font-size:32px;font-weight:700;margin-top:0}
+.spec li{font-size:18px;line-height:1.8}
+
+/* 下載按鈕 */
+.dl-btn{
+  display:inline-block;margin:8px 12px 0 0;padding:12px 26px;border-radius:6px;
+  background:#0278ff;color:#fff;font-weight:700;text-decoration:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);transition:.2s;
+}
+.dl-btn:hover{background:#005fd4;text-decoration:none}
+
+/* 導覽列深灰字 */
+.navbar-default .navbar-nav>li>a, #coco{color:#555!important}
+
+.table-wrap{
+    max-width:100%;          /* 撐滿可用寬 */
+    overflow-x:auto;         /* ✨ 允許水平卷動 */
+    -webkit-overflow-scrolling:touch; /* iOS 慣性滑動 */
+  }
+  /* ② 表格本身維持最小寬度，而不是跟著收斂 */
+  .spec-table{
+    min-width:900px;         /* 依欄位多少自行調整 */
+    border-collapse:collapse;
+    width:100%;
+  }
+  .spec-table th,
+  .spec-table td{
+    padding:10px 14px;
+    border:1px solid #ccc;
+    font-weight:600;         /* 想「加粗」就給 th/td 這行 */
+  }
+  .spec-table th{
+    background:#00a04e;      /* 標頭綠底 */
+    color:#fff;
+    white-space:nowrap;      /* 標頭文字不換行 */
+  }
+
+  /* ====== 版頭區塊 ====== */
+.main-header {
+  background: #fff;       /* 需要背景色請自行調整 */
+  padding: 24px 0;        /* ↑ 整體高度：上下 padding 決定 */
+  border-bottom: 1px solid #ddd;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;    /* 垂直置中 logo 與 nav */
+}
+
+.brand-logo img {
+  width: 140px;           /* ★ logo 大小：可改成 120~160 皆可 */
+  height: auto;
+}
+
+/* 讓 nav 區塊吃滿剩餘寬度 → 再透過 text-align: center 置中 <ul> */
+.nav-wrapper {
+  flex: 1;
+  text-align: center;
+}
+
+/* Bootstrap 3 的 nav item 本來 float:left，要取消才能置中 */
+.nav-wrapper .nav  { 
+  float: none;            /* 取消浮動 */
+  display: inline-block;  /* 使其內容可置中 */
+}
+
+/* 可選：加大 nav 字體＆字距讓區塊感覺更「大」 */
+.nav-wrapper .nav > li > a {
+  font-size: 16px;
+  padding: 12px 18px;
+}
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#ffffff!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+/* ====== Logo ====== */
+.navbar-logo img{
+  height:40px;              /* 調整成你想要的高度 */
+  width:auto;
+  display:inline-block;
+  vertical-align:middle;    /* 與文字垂直置中 */
+  margin-right:8px;         /* 與公司名稱留空隙 */
+}
+
+/* 公司名稱保持 inline-block，好跟 logo 同列 */
+.brand-text{
+  display:inline-block;
+  vertical-align:middle;
+}
+/* ---------- 共用 reset ---------- */
+.container-fluid{ padding-left:0; padding-right:0; }   /* 貼齊左右邊 */
+.navbar-header { display:flex; align-items:center; }   /* logo + 文字同列 */
+.navbar-logo img{ display:block; width:auto; margin-right:8px; }
+
+/* ---------- ① Mobile: ≤ 767px ---------- */
+.navbar-logo img{ height:28px; }               /* logo 高度 */
+.navbar-brand  { font-size:18px; margin:0; }   /* 公司名稱字體 */
+.nav.navbar-nav > li > a{
+  font-size:14px;
+  padding:8px 12px;
+}
+
+/* ---------- ② Tablet: 768–1199px ---------- */
+@media (min-width:768px){
+  .navbar-logo img{ height:36px; }
+  .navbar-brand  { font-size:22px; }
+  .nav.navbar-nav > li > a{
+    font-size:16px;
+    padding:10px 16px;
+  }
+}
+
+/* ---------- ③ Desktop: ≥ 1200px ---------- */
+@media (min-width:1200px){
+  .navbar-logo img{ height:44px; }
+  .navbar-brand  { font-size:26px; }
+  .nav.navbar-nav > li > a{
+    font-size:18px;
+    padding:12px 20px;
+  }
+}
+
+/* ---------- 導覽列高度（視需要） ---------- */
+.navbar{
+  padding-top:6px;    /* Mobile 預設 */
+  padding-bottom:6px;
+}
+@media (min-width:768px){
+  .navbar{ padding-top:10px; padding-bottom:10px; }
+}
+@media (min-width:1200px){
+  .navbar{ padding-top:14px; padding-bottom:14px; }
+}
+/* logo 高度 28~44px 斷點式範例：前面回答給過，可再貼一次 */
+.navbar-logo img{ height:28px; width:auto; margin-right:8px; }
+
+/* 行動裝置小於 768px 時，讓品牌文字自動縮行或隱藏部分 */
+/* 共用：為品牌文字指定較窄的字型 */
+.navbar-brand{
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif;
+  font-variant-east-asian: proportional-width; /* 拉丁符號自動半形化 */
+}
+
+.navbar-brand{
+  font-family:'Noto Sans TC','PingFang TC',sans-serif;
+  font-stretch:100%;          /* 75% ≈ 0.75 寬度 */
+}
+
+/* 手機寬度再進一步擠緊 */
+@media (max-width:1000px){
+  .navbar-brand{
+    font-size:19px;
+    max-width:1000px;          /* 避免擠到漢堡 */
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    letter-spacing:-1px;    /* 輕微負值就有感 */
+    display:inline-block;    /* scale 需脫離 inline 流 */
+    transform:scaleX(.6);    /* 再壓 10% */
+    transform-origin:left;
+  }
+}
+</style>
+</head>
+
+<body>
+<!-- ─────────  共用導覽列  ───────── -->
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid px-reset"> <!-- 左右貼邊，若不要可拿掉 px-reset -->
+    <!-- ====== Navbar Header：Logo + Brand + Toggle ====== -->
+    <div class="navbar-header d-flex">
+
+      <!-- 1. Logo -->
+      <a href="../index.html" class="navbar-logo">
+        <img src="../assets/images/logo1.jpg" alt="Lin‑K logo">
+      </a>
+
+      <!-- 2. 漢堡按鈕：手機/窄螢幕顯示 -->
+      <button type="button"
+              class="navbar-toggle collapsed"
+              data-toggle="collapse"
+              data-target="#main-nav">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+
+      <!-- 3. 公司名稱 -->
+      <a class="navbar-brand" id="coco" href="../index.html">
+        零刻科技股份有限公司
+      </a>
+    </div><!-- /.navbar-header -->
+
+    <!-- ====== 折疊內容：點漢堡展開/收合 ====== -->
+    <div id="main-nav" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="../index.html">About</a></li>
+
+        <!-- Products 下拉 -->
+        <li class="dropdown">
+          <a href="../products.html"
+             class="dropdown-toggle"
+             data-toggle="dropdown"
+             role="button"
+             aria-haspopup="true"
+             aria-expanded="false">
+            Products <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a href="products/HDMI.html">HDMI</a></li>
+            <li><a href="products/DP.html">DP</a></li>
+            <li><a href="products/USB.html">USB</a></li>
+            <li><a href="products/Type-C.html">Type‑C</a></li>
+            <li><a href="products/SystemDesign.html">System&nbsp;Design</a></li>
+          </ul>
+        </li>
+
+        <li><a href="../macrosilicon.html">MacroSilicon&nbsp;IC</a></li>
+        <li><a href="../application.html">Application&nbsp;video</a></li>
+
+        <li><a href="../download.html">Download</a></li>
+
+        <li><a href="../contact.html">Contact</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+<!-- ──────── 導覽列結束 ──────── -->
+
+<section id="main" class="main-header">
+</section>
+
+<section id="main" class="main-header">
+</section>
+
+
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <h1 style="color: #25346e;">MS9121  USB2.0→VGA <br>MS9122  USB2.0→HDMI <br>MS9123  USB2.0→CVBS <br>MS9125  USB2.0→VGA & HDMI&nbsp;</h1>
+    <a href="../download.html" class="btn btn-default">← Back to Download</a>
+  </div>
+</header>
+
+<!-- 主內容 -->
+<section class="main container">
+  <div class="row">
+
+    <!-- 右規格 -->
+    <div class="col-sm-10">
+      <h2>Install Guide&nbsp;</h2>
+      <ul class="spec list-unstyled">
+        <li> 1.Uninstall antivirus software or add to trust list</li>
+        <li> 2.Plug the USB Display dongle</li>
+        <li> 3.Run the driver setup software in USB Mass Storage Device</li>
+        <br>
+
+        <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th style="width:50%">Driver Download</th>
+              <th>OS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>
+                <a href="MSDisplay_MultiDev_v1.0.1.60.exe"
+                download
+                class="dl-btn">
+                <span class="glyphicon glyphicon-save"></span>
+                MSDisplay_MultiDev_v1.0.1.60.exe</a>
+              </td>
+              
+              <td>
+                Windows、Android、Win XP
+              </td>
+
+            </tr>
+
+            <tr>
+              <td>
+                <a href="MSDisplay_MacOS_v1.0.2b_20201125.dmg"
+                download
+                class="dl-btn">
+                <span class="glyphicon glyphicon-save"></span>
+                MSDisplay_MacOS_v1.0.2b_20201125.dmg</a>
+              </td>
+              
+              <td>
+                MacOS
+              </td>
+
+            </tr>
+
+
+            
+          </tbody>
+        </table>
+        
+      </div>
+
+       <br>
+        <li>4.Reboot the systerm</li>
+        
+      </ul>
+      <br>
+      <br>
+
+      
+      
+    </div>
+  </div>
+
+  <!-- 聯絡 -->
+  <h2 id="contact" style="margin-top:80px">Contact&nbsp;Us</h2>
+  <address>
+    Lin-K Technology Co., Ltd.<br>
+    新北市林口區文化一路一段135巷18號1樓<br>
+    E-mail：<a href="mailto:sales@lin-ker.com">sales@lin-ker.com</a><br>
+    Tel：+886-2-2600-3480
+  </address>
+</section>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>
