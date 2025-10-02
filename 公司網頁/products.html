@@ -1,0 +1,337 @@
+<!-- products.html ︱放在與 index.html 同層 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Products | Lin-K Technology</title>
+
+  <!-- 一樣引入 Bootstrap 與你的 index.css -->
+  <link rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/css/index.css">
+  <!-- 這段是額外的 Hero/卡片專屬樣式 (很短) -->
+  <style>
+    /* --- Hero / Carousel --- */
+    #hero {margin-bottom:80px;}
+    #hero .item{height:460px;background-size:cover;background-position:center;}
+    #hero .carousel-caption{text-align:left;left:8%;right:auto;bottom:90px;}
+    #hero h2{font-size:46px;font-weight:700;line-height:1.3}
+    #hero .view-btn{display:inline-block;margin-top:24px;font-size:22px;
+      border-bottom:2px solid #222;color:#222;text-decoration:none}
+    #hero .view-btn:hover{color:#0087c4;border-color:#0087c4}
+
+    /* --- 卡片網格 --- */
+    .product-grid{display:flex;flex-wrap:wrap;gap:40px;}
+    .product-card{flex:0 0 23%;min-width:240px;}        /* 四欄，低於 992px 自動換行 */
+    @media(max-width:1199px){.product-card{flex-basis:30%;}}
+    @media(max-width:767px){.product-card{flex-basis:48%;}}
+    @media(max-width:480px){.product-card{flex-basis:100%;}}
+  </style>
+
+  <!-- products.html 最後，緊貼 </body> 之前 -->
+   <style>
+   .products-layout{
+    display:flex !important;          /* ← 強制成 Flex */
+    align-items:flex-start;
+    gap:40px;}
+    
+    .product-grid{flex:1;}
+    
+    .prod-sidebar{
+    width:260px;
+    position:sticky; top:120px;
+    flex-shrink:0;         /* 避免被壓縮 */}
+    
+    @media(max-width:991px){
+        .prod-sidebar{display:none;}}
+
+     /* ====== 版頭區塊 ====== */
+.main-header      { background:#fff; padding:24px 0; border-bottom:1px solid #ddd; }
+.header-inner     { display:flex; align-items:center; }   /* 使 logo 與 nav 同列 */
+.brand-logo img   { width:140px; height:auto; margin-right:20px; }  /* logo 大小 & 間距 */
+
+/* ====== 關鍵：UL 也用 flex，且 nowrap ====== */
+.nav-wrapper      { flex:1; }          /* 佔滿剩餘寬度 */
+.nav-wrapper .nav {
+  display:flex;          /* 橫向排版 */
+  flex-wrap:nowrap;      /* 不允許自動換行，超寬時會產生水平卷軸 */
+  justify-content:center;/* 置中整列導覽 */
+  margin:0; padding:0;   /* 清掉 Bootstrap 預設 UL 邊距 */
+}
+
+.nav-wrapper .nav > li {
+  float:none;            /* 取消 Bootstrap 的 float:left */
+  list-style:none;       /* 去除點點 */
+}
+
+.nav-wrapper .nav > li > a {
+  font-size:16px;
+  padding:12px 18px;     /* 連結內邊距 */
+}
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#ffffff!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+ /* ====== 版頭區塊 ====== */
+.main-header      { background:#fff; padding:24px 0; border-bottom:1px solid #ddd; }
+.header-inner     { display:flex; align-items:center; }   /* 使 logo 與 nav 同列 */
+.brand-logo img   { width:140px; height:auto; margin-right:20px; }  /* logo 大小 & 間距 */
+/* ====== Logo ====== */
+.navbar-logo img{
+  height:40px;              /* 調整成你想要的高度 */
+  width:auto;
+  display:inline-block;
+  vertical-align:middle;    /* 與文字垂直置中 */
+  margin-right:8px;         /* 與公司名稱留空隙 */
+}
+
+/* 公司名稱保持 inline-block，好跟 logo 同列 */
+.brand-text{
+  display:inline-block;
+  vertical-align:middle;
+}
+/* ---------- 共用 reset ---------- */
+.container-fluid{ padding-left:0; padding-right:0; }   /* 貼齊左右邊 */
+.navbar-header { display:flex; align-items:center; }   /* logo + 文字同列 */
+.navbar-logo img{ display:block; width:auto; margin-right:8px; }
+
+/* ---------- ① Mobile: ≤ 767px ---------- */
+.navbar-logo img{ height:28px; }               /* logo 高度 */
+.navbar-brand  { font-size:18px; margin:0; }   /* 公司名稱字體 */
+.nav.navbar-nav > li > a{
+  font-size:14px;
+  padding:8px 12px;
+}
+
+/* ---------- ② Tablet: 768–1199px ---------- */
+@media (min-width:768px){
+  .navbar-logo img{ height:36px; }
+  .navbar-brand  { font-size:22px; }
+  .nav.navbar-nav > li > a{
+    font-size:16px;
+    padding:10px 16px;
+  }
+}
+
+/* ---------- ③ Desktop: ≥ 1200px ---------- */
+@media (min-width:1200px){
+  .navbar-logo img{ height:44px; }
+  .navbar-brand  { font-size:26px; }
+  .nav.navbar-nav > li > a{
+    font-size:18px;
+    padding:12px 20px;
+  }
+}
+
+/* ---------- 導覽列高度（視需要） ---------- */
+.navbar{
+  padding-top:6px;    /* Mobile 預設 */
+  padding-bottom:6px;
+}
+@media (min-width:768px){
+  .navbar{ padding-top:10px; padding-bottom:10px; }
+}
+@media (min-width:1200px){
+  .navbar{ padding-top:14px; padding-bottom:14px; }
+}
+/* logo 高度 28~44px 斷點式範例：前面回答給過，可再貼一次 */
+.navbar-logo img{ height:28px; width:auto; margin-right:8px; }
+
+/* 行動裝置小於 768px 時，讓品牌文字自動縮行或隱藏部分 */
+/* 共用：為品牌文字指定較窄的字型 */
+.navbar-brand{
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif;
+  font-variant-east-asian: proportional-width; /* 拉丁符號自動半形化 */
+}
+
+.navbar-brand{
+  font-family:'Noto Sans TC','PingFang TC',sans-serif;
+  font-stretch:100%;          /* 75% ≈ 0.75 寬度 */
+}
+
+/* 手機寬度再進一步擠緊 */
+@media (max-width:1000px){
+  .navbar-brand{
+    font-size:19px;
+    max-width:1000px;          /* 避免擠到漢堡 */
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    letter-spacing:-1px;    /* 輕微負值就有感 */
+    display:inline-block;    /* scale 需脫離 inline 流 */
+    transform:scaleX(.6);    /* 再壓 10% */
+    transform-origin:left;
+  }
+}
+/* ========= 頁首 HERO ========= */
+.hero{
+  background:url("assets/images/ms-hero.jpg") center/cover no-repeat;
+  padding:120px 0 100px;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.4);
+}
+.hero h1{font-size:54px;font-weight:800;margin:0 0 10px}
+.hero .lead{font-size:24px;margin-bottom:25px}
+</style>
+
+</head>
+
+
+
+
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid px-reset"> <!-- 左右貼邊，若不要可拿掉 px-reset -->
+    <!-- ====== Navbar Header：Logo + Brand + Toggle ====== -->
+    <div class="navbar-header d-flex">
+
+      <!-- 1. Logo -->
+      <a href="index.html" class="navbar-logo">
+        <img src="assets/images/logo1.jpg" alt="Lin‑K logo">
+      </a>
+
+      <!-- 2. 漢堡按鈕：手機/窄螢幕顯示 -->
+      <button type="button"
+              class="navbar-toggle collapsed"
+              data-toggle="collapse"
+              data-target="#main-nav">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+
+      <!-- 3. 公司名稱 -->
+      <a class="navbar-brand" id="coco" href="index.html">
+        零刻科技股份有限公司
+      </a>
+    </div><!-- /.navbar-header -->
+
+    <!-- ====== 折疊內容：點漢堡展開/收合 ====== -->
+    <div id="main-nav" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="index.html">About</a></li>
+
+        <!-- Products 下拉 -->
+        <li class="dropdown">
+        <!-- ① 直接跳到產品總覽 -->
+        <a href="products.html">Products</a>
+        
+        <!-- ② 只負責下拉 -->
+        <a href="#" class="dropdown-toggle caret-btn" data-toggle="dropdown">
+          <span class="caret"></span>
+        </a>
+        
+        <ul class="dropdown-menu">
+          <li><a href="products/HDMI.html">HDMI</a></li>
+          <li><a href="products/DP.html">DP</a></li>
+          <li><a href="products/USB.html">USB</a></li>
+          <li><a href="products/Type-C.html">Type‑C</a></li>
+          <li><a href="products/SystemDesign.html">System Design</a></li>
+        </ul>
+        </li>
+
+        <li><a href="macrosilicon.html">MacroSilicon&nbsp;IC</a></li>
+        <li><a href="application.html">Application&nbsp;video</a></li>
+
+        <li><a href="download.html">Download</a></li>
+
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+<section id="main" class="main-header">
+</section>
+
+<section id="main" class="main-header">
+</section>
+
+<header class="hero">
+  <div class="container">
+    <h1 style="color: #444;">Products</h1>
+  </div>
+</header>
+<body>
+  </div><!-- /.header-inner -->
+    <!--   產品卡片   -->
+    <!-- ╚════════════╝ -->
+    <section class="container">
+        <div class="products-layout">   <!-- ★ 新增包覆容器 -->
+
+          <!-- 右：類別索引欄 -->
+            <aside class="prod-sidebar" style="font-size: 20px;">
+                <h2 class="sidebar-title">產品介紹</h2>
+                <ul class="cat-list">
+                    <li><a href="products/HDMI.html">HDMI</a></li>
+                    <li><a href="products/DP.html">DP</a></li>
+                    <li><a href="products/USB.html">USB</a></li>
+                    <li><a href="products/Type-C.html">TypeC</a></li>
+                    <li><a href="products/System%20Design.html">System&nbsp;Design</a></li>
+                </ul>
+            </aside>
+
+            <div class="product-grid">
+                
+                <!-- Card 1 -->
+                <article class="product-card" id="hdmi">
+                    <a href="MSproducts/MS2130.html" class="card-link"></a>
+                    <img src="assets/images/MS2130.png" class="product-img">
+                    <h3 class="product-title">MS2130</h3>
+                    <p class="product-sub">HDMI → USB 3.0</p>
+
+                    <div class="product-func">
+                        <ul>
+                            <li>4K @ 30 Hz input</li>
+                            <li>1080p @ 60 Hz output</li>
+                        </ul>
+                    </div>
+                    <a class="product-more" href="MSproducts/MS2130.html" target="_blank">Data Sheet</a>
+                </article>
+                
+                <!-- Card 2 -->
+                <article class="product-card" id="dp">
+                    <img src="assets/images/DP1.4.png" class="product-img">
+                    <h3 class="product-title">DP14 Emulator</h3>
+                    <p class="product-sub">DisplayPort 1.4</p>
+
+                    <div class="product-func">
+                        <ul><li>Passive EDID Emulator</li></ul>
+                    </div>
+                    <a class="product-more" href="products/DP.html" target="_blank">Data Sheet</a>
+                </article>
+                
+                <!-- Card 3 -->
+                 <article class="product-card" id="usb">
+                    <img src="assets/images/MS2109.png" class="product-img">
+                    <h3 class="product-title">MS2109</h3>
+                    <p class="product-sub">HDMI1.4 → USB 2.0</p>
+                    <div class="product-func">
+                        <ul><li>MJPEG / YUV422</li></ul>
+                    </div>
+                    <a class="product-more" href="MSproducts/MS2109.html" target="_blank">Data Sheet</a>
+                </article>
+                
+                <!-- Card 4 -->
+                 <article class="product-card" id="typec">
+                    <img src="assets/images/Type-C.png" class="product-img">
+                    <h3 class="product-title">Type-C Capture</h3>
+                    <p class="product-sub">USB-C&nbsp;Video In</p>
+                    <div class="product-func">
+                        <ul><li>Plug&nbsp;and&nbsp;Play</li></ul>
+                    </div>
+                    <a class="product-more" href="products/Type-C.html">Coming Soon</a>
+                </article>
+            
+            </div>
+
+           
+        
+        
+        </div><!-- /.products-layout -->
+    
+    </section>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>
