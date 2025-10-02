@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Application Video | Lin‑K Technology</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap 3 CDN -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />
+  <!-- 你的主樣式 -->
+  <link rel="stylesheet" href="assets/css/index.css" />
+
+  <style>
+    /* ─── HERO ／頁首 ─────────────────────────── */
+    .video-hero {
+      background: url("assets/images/video-hero.jpg") center/cover no-repeat;
+      padding: 120px 0 90px;
+      text-align: center;
+      color: #fff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    }
+    .video-hero h1 {
+      font-size: 54px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    /* ─── 兩顆分類按鈕 ────────────────────────── */
+    .video-nav {
+      background: #f8f9fa;
+      padding: 25px 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+    .video-nav .nav-btn {
+      margin: 0 10px;
+      font-size: 20px;
+      font-weight: 700;
+      border: 0;
+      padding: 12px 28px;
+      border-radius: 6px;
+      background: #1d4263;
+      color: #fff;
+      transition: background 0.25s, transform 0.25s;
+    }
+    .video-nav .nav-btn:hover {
+      background: #0261b5;
+      transform: translateY(-2px);
+    }
+
+    /* ─── Video Grid ───────────────────────────── */
+    .video-section {
+      padding: 60px 0 80px;
+    }
+    .video-card {
+      margin-bottom: 40px;
+    }
+    .video-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 12px 0 4px;
+    }
+    .video-desc {
+      font-size: 14px;
+      color: #666;
+    }
+    /* iframe 自適應 */
+    .embed-responsive {
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ===== 手機 (max-width:767px) ===== */
+    @media (max-width:767px){
+  /* HERO */
+  .video-hero{padding:60px 0 50px}
+  .video-hero h1{font-size:32px}
+
+  /* 兩顆分類按鈕 */
+  .video-nav{padding:18px 0}
+  .video-nav .nav-btn{font-size:16px;padding:10px 20px}
+
+  /* 主內容上下留白、字級 */
+  .main{padding-left:15px;padding-right:15px}
+  .main h2{font-size:24px}
+  .main p, .main address{font-size:15px;line-height:1.7}
+  }
+
+   /* ====== 版頭區塊 ====== */
+.main-header      { background:#fff; padding:24px 0; border-bottom:1px solid #ddd; }
+.header-inner     { display:flex; align-items:center; }   /* 使 logo 與 nav 同列 */
+.brand-logo img   { width:140px; height:auto; margin-right:20px; }  /* logo 大小 & 間距 */
+
+/* ====== 關鍵：UL 也用 flex，且 nowrap ====== */
+.nav-wrapper      { flex:1; }          /* 佔滿剩餘寬度 */
+.nav-wrapper .nav {
+  display:flex;          /* 橫向排版 */
+  flex-wrap:nowrap;      /* 不允許自動換行，超寬時會產生水平卷軸 */
+  justify-content:center;/* 置中整列導覽 */
+  margin:0; padding:0;   /* 清掉 Bootstrap 預設 UL 邊距 */
+}
+
+.nav-wrapper .nav > li {
+  float:none;            /* 取消 Bootstrap 的 float:left */
+  list-style:none;       /* 去除點點 */
+}
+
+.nav-wrapper .nav > li > a {
+  font-size:16px;
+  padding:12px 18px;     /* 連結內邊距 */
+}
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#ffffff!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+/* ====== Logo ====== */
+.navbar-logo img{
+  height:40px;              /* 調整成你想要的高度 */
+  width:auto;
+  display:inline-block;
+  vertical-align:middle;    /* 與文字垂直置中 */
+  margin-right:8px;         /* 與公司名稱留空隙 */
+}
+
+/* 公司名稱保持 inline-block，好跟 logo 同列 */
+.brand-text{
+  display:inline-block;
+  vertical-align:middle;
+}
+/* ---------- 共用 reset ---------- */
+.container-fluid{ padding-left:0; padding-right:0; }   /* 貼齊左右邊 */
+.navbar-header { display:flex; align-items:center; }   /* logo + 文字同列 */
+.navbar-logo img{ display:block; width:auto; margin-right:8px; }
+
+/* ---------- ① Mobile: ≤ 767px ---------- */
+.navbar-logo img{ height:28px; }               /* logo 高度 */
+.navbar-brand  { font-size:18px; margin:0; }   /* 公司名稱字體 */
+.nav.navbar-nav > li > a{
+  font-size:14px;
+  padding:8px 12px;
+}
+
+/* ---------- ② Tablet: 768–1199px ---------- */
+@media (min-width:768px){
+  .navbar-logo img{ height:36px; }
+  .navbar-brand  { font-size:22px; }
+  .nav.navbar-nav > li > a{
+    font-size:16px;
+    padding:10px 16px;
+  }
+}
+
+/* ---------- ③ Desktop: ≥ 1200px ---------- */
+@media (min-width:1200px){
+  .navbar-logo img{ height:44px; }
+  .navbar-brand  { font-size:26px; }
+  .nav.navbar-nav > li > a{
+    font-size:18px;
+    padding:12px 20px;
+  }
+}
+
+/* ---------- 導覽列高度（視需要） ---------- */
+.navbar{
+  padding-top:6px;    /* Mobile 預設 */
+  padding-bottom:6px;
+}
+@media (min-width:768px){
+  .navbar{ padding-top:10px; padding-bottom:10px; }
+}
+@media (min-width:1200px){
+  .navbar{ padding-top:14px; padding-bottom:14px; }
+}
+/* logo 高度 28~44px 斷點式範例：前面回答給過，可再貼一次 */
+.navbar-logo img{ height:28px; width:auto; margin-right:8px; }
+
+/* 行動裝置小於 768px 時，讓品牌文字自動縮行或隱藏部分 */
+/* 共用：為品牌文字指定較窄的字型 */
+.navbar-brand{
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif;
+  font-variant-east-asian: proportional-width; /* 拉丁符號自動半形化 */
+}
+
+.navbar-brand{
+  font-family:'Noto Sans TC','PingFang TC',sans-serif;
+  font-stretch:100%;          /* 75% ≈ 0.75 寬度 */
+}
+
+/* 手機寬度再進一步擠緊 */
+@media (max-width:1000px){
+  .navbar-brand{
+    font-size:19px;
+    max-width:1000px;          /* 避免擠到漢堡 */
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    letter-spacing:-1px;    /* 輕微負值就有感 */
+    display:inline-block;    /* scale 需脫離 inline 流 */
+    transform:scaleX(.6);    /* 再壓 10% */
+    transform-origin:left;
+  }
+}
+  </style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid px-reset"> <!-- 左右貼邊，若不要可拿掉 px-reset -->
+    <!-- ====== Navbar Header：Logo + Brand + Toggle ====== -->
+    <div class="navbar-header d-flex">
+
+      <!-- 1. Logo -->
+      <a href="index.html" class="navbar-logo">
+        <img src="assets/images/logo1.jpg" alt="Lin‑K logo">
+      </a>
+
+      <!-- 2. 漢堡按鈕：手機/窄螢幕顯示 -->
+      <button type="button"
+              class="navbar-toggle collapsed"
+              data-toggle="collapse"
+              data-target="#main-nav">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+
+      <!-- 3. 公司名稱 -->
+      <a class="navbar-brand" id="coco" href="index.html">
+        零刻科技股份有限公司
+      </a>
+    </div><!-- /.navbar-header -->
+
+    <!-- ====== 折疊內容：點漢堡展開/收合 ====== -->
+    <div id="main-nav" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="index.html">About</a></li>
+
+        <!-- Products 下拉 -->
+        <li class="dropdown">
+        <!-- ① 直接跳到產品總覽 -->
+        <a href="products.html">Products</a>
+        
+        <!-- ② 只負責下拉 -->
+        <a href="#" class="dropdown-toggle caret-btn" data-toggle="dropdown">
+          <span class="caret"></span>
+        </a>
+        
+        <ul class="dropdown-menu">
+          <li><a href="products/HDMI.html">HDMI</a></li>
+          <li><a href="products/DP.html">DP</a></li>
+          <li><a href="products/USB.html">USB</a></li>
+          <li><a href="products/Type-C.html">Type‑C</a></li>
+          <li><a href="products/SystemDesign.html">System Design</a></li>
+        </ul>
+        </li>
+
+        <li><a href="macrosilicon.html">MacroSilicon&nbsp;IC</a></li>
+        <li><a href="application.html">Application&nbsp;video</a></li>
+
+        <li><a href="download.html">Download</a></li>
+
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+<section id="main" class="main-header">
+</section>
+
+<section id="main" class="main-header">
+</section>
+
+
+
+  <!-- HERO -->
+  <header class="video-hero">
+    <div class="container">
+      <h1 style="color: #444;">Download</h1>
+    </div>
+  </header>
+
+ 
+  
+
+  <section class="container main">
+    <div class="row">
+        <!-- 左：章節索引 -->
+         <div class="col-sm-3">
+            <h2>Download</h2>
+
+            <h2 style="font-size:20px">Driver</h2>
+            <ul class="toc list-unstyled">
+                <li><a href="download/USB3.0.html">USB3.0</a></li>
+                <li><a href="download/USB2.0.html">USB2.0</a></li>
+            </ul>
+            
+           
+            
+        </div>
+
+
+        <!-- 右：主內容 -->
+         <div class="col-sm-9">
+          <h2 id="series">Download</h2>
+        <p class="desc-box ms-black" style="color: #666;">
+          本區提供以下產品的驅動程式與相關文件下載：<br>
+          MS9132：USB 3.0 → HDMI<br>
+          MS9121：USB 2.0 → VGA<br>
+          MS9122：USB 2.0 → HDMI<br>
+          MS9123：USB 2.0 → CVBS<br>
+          MS9125：USB 2.0 → VGA & HDMI<br>
+          請依照您的需求，點選左側選單進入對應的下載頁面。<br>
+          建議使用 Microsoft Edge 或 Firefox 瀏覽器以獲得最佳瀏覽與下載體驗，謝謝！<br>
+        </p>
+         </div>
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+        
+
+</section>
+
+  <!-- 共用 JS -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>
