@@ -1,0 +1,472 @@
+<!-- MSproducts/ms9601a.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MS1826 │ Lin-K Technology</title>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="../assets/css/index.css"><!-- ← 你的共用樣式 -->
+
+<style>
+/*— HERO —*/
+.hero{
+  background:#225393 url("../assets/images/ms9601a/hero-bg.jpg") center/cover no-repeat;
+  padding:120px 0 80px;
+  text-align:center;color:#fff;
+}
+.hero h1{font-size:56px;font-weight:800;margin:0 0 10px}
+.hero .lead{font-size:24px}
+
+/*— 主內容 —*/
+.main{padding:80px 0}
+.main h2{font-size:32px;font-weight:700;margin-top:0}
+.spec li{font-size:18px;line-height:1.8}
+.download a{font-size:18px}
+
+/* 讓產品照常駐寬  */
+.prod-img{width:100%;max-width:420px}
+
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a,
+#coco{color:#555!important}
+
+.des-box{font-weight:600;color:#555}
+.desc-box{color:#555}
+
+.table-wrap{
+    max-width:100%;          /* 撐滿可用寬 */
+    overflow-x:auto;         /* ✨ 允許水平卷動 */
+    -webkit-overflow-scrolling:touch; /* iOS 慣性滑動 */
+  }
+  /* ② 表格本身維持最小寬度，而不是跟著收斂 */
+  .spec-table{
+    min-width:900px;         /* 依欄位多少自行調整 */
+    border-collapse:collapse;
+    width:100%;
+  }
+  .spec-table th,
+  .spec-table td{
+    padding:10px 14px;
+    border:1px solid #ccc;
+    font-weight:600;         /* 想「加粗」就給 th/td 這行 */
+  }
+  .spec-table th{
+    background:#00a04e;      /* 標頭綠底 */
+    color:#fff;
+    white-space:nowrap;      /* 標頭文字不換行 */
+  }
+
+   /* ====== 版頭區塊 ====== */
+.main-header      { background:#fff; padding:24px 0; border-bottom:1px solid #ddd; }
+.header-inner     { display:flex; align-items:center; }   /* 使 logo 與 nav 同列 */
+.brand-logo img   { width:140px; height:auto; margin-right:20px; }  /* logo 大小 & 間距 */
+
+/* ====== 關鍵：UL 也用 flex，且 nowrap ====== */
+.nav-wrapper      { flex:1; }          /* 佔滿剩餘寬度 */
+.nav-wrapper .nav {
+  display:flex;          /* 橫向排版 */
+  flex-wrap:nowrap;      /* 不允許自動換行，超寬時會產生水平卷軸 */
+  justify-content:center;/* 置中整列導覽 */
+  margin:0; padding:0;   /* 清掉 Bootstrap 預設 UL 邊距 */
+}
+
+.nav-wrapper .nav > li {
+  float:none;            /* 取消 Bootstrap 的 float:left */
+  list-style:none;       /* 去除點點 */
+}
+
+.nav-wrapper .nav > li > a {
+  font-size:16px;
+  padding:12px 18px;     /* 連結內邊距 */
+}
+/* 深灰導覽列字 */
+.navbar-default .navbar-nav>li>a , #coco{color:#ffffff!important}
+.navbar-nav > li.dropdown:hover > .dropdown-menu{display:block} /* 滑入展開 */
+/* ====== Logo ====== */
+.navbar-logo img{
+  height:40px;              /* 調整成你想要的高度 */
+  width:auto;
+  display:inline-block;
+  vertical-align:middle;    /* 與文字垂直置中 */
+  margin-right:8px;         /* 與公司名稱留空隙 */
+}
+
+/* 公司名稱保持 inline-block，好跟 logo 同列 */
+.brand-text{
+  display:inline-block;
+  vertical-align:middle;
+}
+/* ---------- 共用 reset ---------- */
+.container-fluid{ padding-left:0; padding-right:0; }   /* 貼齊左右邊 */
+.navbar-header { display:flex; align-items:center; }   /* logo + 文字同列 */
+.navbar-logo img{ display:block; width:auto; margin-right:8px; }
+
+/* ---------- ① Mobile: ≤ 767px ---------- */
+.navbar-logo img{ height:28px; }               /* logo 高度 */
+.navbar-brand  { font-size:18px; margin:0; }   /* 公司名稱字體 */
+.nav.navbar-nav > li > a{
+  font-size:14px;
+  padding:8px 12px;
+}
+
+/* ---------- ② Tablet: 768–1199px ---------- */
+@media (min-width:768px){
+  .navbar-logo img{ height:36px; }
+  .navbar-brand  { font-size:22px; }
+  .nav.navbar-nav > li > a{
+    font-size:16px;
+    padding:10px 16px;
+  }
+}
+
+/* ---------- ③ Desktop: ≥ 1200px ---------- */
+@media (min-width:1200px){
+  .navbar-logo img{ height:44px; }
+  .navbar-brand  { font-size:26px; }
+  .nav.navbar-nav > li > a{
+    font-size:18px;
+    padding:12px 20px;
+  }
+}
+
+/* ---------- 導覽列高度（視需要） ---------- */
+.navbar{
+  padding-top:6px;    /* Mobile 預設 */
+  padding-bottom:6px;
+}
+@media (min-width:768px){
+  .navbar{ padding-top:10px; padding-bottom:10px; }
+}
+@media (min-width:1200px){
+  .navbar{ padding-top:14px; padding-bottom:14px; }
+}
+/* logo 高度 28~44px 斷點式範例：前面回答給過，可再貼一次 */
+.navbar-logo img{ height:28px; width:auto; margin-right:8px; }
+
+/* 行動裝置小於 768px 時，讓品牌文字自動縮行或隱藏部分 */
+/* 共用：為品牌文字指定較窄的字型 */
+.navbar-brand{
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Helvetica Neue', Arial, sans-serif;
+  font-variant-east-asian: proportional-width; /* 拉丁符號自動半形化 */
+}
+
+.navbar-brand{
+  font-family:'Noto Sans TC','PingFang TC',sans-serif;
+  font-stretch:100%;          /* 75% ≈ 0.75 寬度 */
+}
+
+/* 手機寬度再進一步擠緊 */
+@media (max-width:1000px){
+  .navbar-brand{
+    font-size:19px;
+    max-width:1000px;          /* 避免擠到漢堡 */
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    letter-spacing:-1px;    /* 輕微負值就有感 */
+    display:inline-block;    /* scale 需脫離 inline 流 */
+    transform:scaleX(.6);    /* 再壓 10% */
+    transform-origin:left;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ▸ 導覽列（沿用你的 nav） -->
+<nav class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid px-reset"> <!-- 左右貼邊，若不要可拿掉 px-reset -->
+    <!-- ====== Navbar Header：Logo + Brand + Toggle ====== -->
+    <div class="navbar-header d-flex">
+
+      <!-- 1. Logo -->
+      <a href="../index.html" class="navbar-logo">
+        <img src="../assets/images/logo1.jpg" alt="Lin‑K logo">
+      </a>
+
+      <!-- 2. 漢堡按鈕：手機/窄螢幕顯示 -->
+      <button type="button"
+              class="navbar-toggle collapsed"
+              data-toggle="collapse"
+              data-target="#main-nav">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+
+      <!-- 3. 公司名稱 -->
+      <a class="navbar-brand" id="coco" href="../index.html">
+        零刻科技股份有限公司
+      </a>
+    </div><!-- /.navbar-header -->
+
+    <!-- ====== 折疊內容：點漢堡展開/收合 ====== -->
+    <div id="main-nav" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="../index.html">About</a></li>
+
+        <!-- Products 下拉 -->
+        <li class="dropdown">
+        <!-- ① 直接跳到產品總覽 -->
+        <a href="../products.html">Products</a>
+        
+        <!-- ② 只負責下拉 -->
+        <a href="#" class="dropdown-toggle caret-btn" data-toggle="dropdown">
+          <span class="caret"></span>
+        </a>
+        
+        <ul class="dropdown-menu">
+          <li><a href="../products/HDMI.html">HDMI</a></li>
+          <li><a href="../products/DP.html">DP</a></li>
+          <li><a href="../products/USB.html">USB</a></li>
+          <li><a href="../products/Type-C.html">Type‑C</a></li>
+          <li><a href="../products/SystemDesign.html">System Design</a></li>
+        </ul>
+        </li>
+
+        <li><a href="../macrosilicon.html">MacroSilicon&nbsp;IC</a></li>
+        <li><a href="../application.html">Application&nbsp;video</a></li>
+
+        <li><a href="../download.html">Download</a></li>
+
+        <li><a href="../contact.html">Contact</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+<section id="main" class="main-header">
+</section>
+
+<section id="main" class="main-header">
+</section>
+
+
+
+<!-- ╔════ HERO ════╗ -->
+<header class="hero">
+  <div class="container">
+    <h1>MS2131</h1>
+    <p class="lead">HDMI1.4/DVI1.0 &nbsp;→&nbsp; USB3.0/HDMI1.4</p>
+    <a href="../macrosilicon.html" class="btn btn-default">← Back to MacroSilicon IC Solution</a>
+  </div>
+</header>
+
+<!-- ╔════ 內容 ：左 TOC + 右說明 ════╗ -->
+<section class="container main">
+
+  <div class="row">
+    <!-- 左：章節索引 -->
+    <div class="col-sm-3">
+      <h2>宏晶微電子科技股份有限公司</h2>
+      <h3>MacroSilicon Technology Co., Ltd.</h3>
+      <p class="desc-box">零刻科技為宏晶微電子在台灣唯一指定 IC 代理商。</p>
+      <a href="http://en.macrosilicon.com/default.asp" target="_blank"
+         class="btn btn-primary"><span class="glyphicon glyphicon-info-sign"></span> 宏晶官網連結</a>
+      <br>
+      <br>
+      <br>
+      <br>
+      <h2>主打IC介紹</h2>
+      <h2 class="mt-4 sub-heading" style="font-size:22px">【Converter】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS1824.html">MS1824</a></li>
+        <li><a href="MS1835.html">MS1835</a></li>
+        <li><a href="MS1836S.html">MS1836S</a></li>
+        <li><a href="MS1858E.html">MS1858E</a></li>
+        <li><a href="MS9282.html">MS9282</a></li>
+      </ul>
+      
+      <h2 style="font-size:22px">【USB Capture】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS2107.html">MS2107</a></li>
+        <li><a href="MS2109.html">MS2109</a></li>
+        <li><a href="MS2109S.html">MS2109S</a></li>
+        <li><a href="MS2130.html">MS2130</a></li>
+        <li><a href="MS2131.html">MS2131</a></li>
+        <li><a href="MS2131S.html">MS2131S</a></li>
+      </ul>
+
+      <h2 style="font-size:22px">【USB Screen thrower】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS9122.html">MS9122</a></li>
+        <li><a href="MS9132.html">MS9132</a></li>
+      </ul>
+
+      <h2 style="font-size:22px">【Splitter】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS9332.html">MS9332</a></li>
+        <li><a href="MS9333.html">MS9333</a></li>
+        <li><a href="MS9334.html">MS9334</a></li>
+      </ul>
+
+      <h2 style="font-size:22px">【TV Encoder】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS7024.html">MS7024</a></li>
+      </ul>
+
+      <h2 style="font-size:22px">【HDMI Video Processor】</h2>
+      <ul class="toc list-unstyled">
+        <li><a href="MS1826.html">MS1826</a></li>
+      </ul>
+    </div>
+
+    <!-- 右：主內容 -->
+    <div class="col-sm-9">
+
+      <!-- Overview -->
+      <h2 id="series">MS2131</h2>
+      <h2 id="series">HDMI1.4/DVI1.0 &nbsp;→&nbsp; USB3.0/HDMI1.4</h2>
+      <p class="des-box">General Description</p>
+      <p class="desc-box">MS2131 is a USB 3.0 HD video and audio acquisition and processing chip, which integrates USB 3.0 device controller, data transceiver module, audio and video processing module. MS2131 can transmit the HDMI input audio and video signals to PC, smartphone and tablet for preview or acquisition through USB 3.0 interface, and can also display or expand the information on PC, smartphone and tablet to larger display devices through USB 3.0 interface. MS2131 supports HDMI loop out function, supports USB Host recording while playing audio and video through HDMI output. MS2131 supports 2 channels digital audio (I2S) input, and supports digital audio and HDMI audio mixing process. MS2131 supports 2 channels digital audio (I2S) output and SPDIF digital audio output. MS2131 output supports YUV422 and MJPEG modes, compatible with Windows, Android and Mac OS systems.</p>
+      <br>
+      <p cliass="des-box">Features</p>
+      <p class="desc-box">(swipe right to see more)</p>
+
+
+      <!-- ③ 版面內使用時 -->
+      <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th style="width:50%">HDMI RX</th>
+              <th>HDMI TX</th>
+            </tr>
+          </thead>
+          
+          <tbody>
+            <tr>
+              <td>
+                ◆HDMI 1.4b compatible<br>
+                ◆Support DVI1.0<br>
+                ◆Support HDCP 1.4<br>
+                ◆Support RGB444, YCBCR422, YCBCR444, YCBCR420 color space<br>
+                ◆Support deep color 24/30/36 bit mode<br>
+                ◆Support CEA-861 /CEA-861-F video format<br>
+                ◆Max input resolution 4K(3840×2160@30Hz)
+              </td>
+              
+              <td>
+                ◆HDMI 1.4b compatible<br>
+                ◆Supports EDID / HPD process<br>
+                ◆Supports DVI 1.0 mode<br>
+                ◆Max output resolution: 4K(3840×2160@30Hz)<br>
+                ◆Supports HDMI RX to HDMI TX pass-through mode output
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th style="width:50%">Audio</th>
+              <th>USB 3.0</th>
+            </tr>
+          </thead>
+          
+          <tbody>
+            <tr>
+              <td>
+                ◆USB audio default 48KHz stereo output<br>
+                ◆Supports 2 channels digital audio (I2S) input<br>
+                ◆Supports 2 channels of digital audio I2S, 1 channel of SPDIF output<br>
+                ◆ Supports 2 channels I2S input audio and HDMI audio mixing processing
+              </td>
+              
+              <td>
+                ◆Integrated USB 3.0 device<br>
+                ◆Compatible with USB 2.0 device mode<br>
+                ◆USB video conforms to UVC1.0 specification<br>
+                ◆USB audio conforms to UAC1.0 specification<br>
+                ◆USB video output supports both YUV422 and MJPEG modes<br>
+                ◆USB video output resolution: Default max resolution 1920×1080@60Hz
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th style="width:50%">OS Support</th>
+              <th>Clock</th>
+            </tr>
+          </thead>
+          
+          <tbody>
+            <tr>
+              <td>
+                ◆Windows XP/7/8/10/11<br>
+                ◆Android 5.0 or higher<br>
+                ◆Linux<br>
+                ◆Mac OS
+              </td>
+              
+              <td>
+                ◆External 24MHz passive crystal oscillator<br>
+                ◆On-chip PLL
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th style="width:50%">Reset</th>
+              <th>Package</th>
+            </tr>
+          </thead>
+          
+          <tbody>
+            <tr>
+              <td>
+                ◆On-chip power on reset
+              </td>
+              
+              <td>
+                ◆LQFP-100 plastic(14mm×14mm)<br>
+                ◆RoHS compliant 
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <br>
+      <br>
+
+      <!-- Overview -->
+      <h2 id="series">EVA Board</h2>
+      <img src="../assets/images/EVABoard2131.png" class="product-img">
+      <h2 id="series">Function Block Diagram</h2>
+      <img src="../assets/images/FunctionBlockDiagram2131.png" class="product-img">
+
+    </div><!-- /.col -->
+
+  </div><!-- /.row -->
+
+  <!-- Contact -->
+      <h2 id="contact">Contact Us</h2>
+      <address>
+        Lin-K Technology Co., Ltd.<br>
+        地址：新北市林口區文化一路一段135巷18號1樓<br>
+        E-mail：<a href="mailto:sales@lin-ker.com">sales@lin-ker.com</a><br>
+        電話：+886-2-2600-3480
+      </address>
+
+</section>
+
+
+<!-- ▸ 共用 JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</body>
+</html>
