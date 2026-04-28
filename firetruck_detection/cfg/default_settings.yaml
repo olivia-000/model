@@ -1,0 +1,145 @@
+# ── 偵測模組宣告（每個 module 直接指定要跑哪些 channel） ──────────
+detection_modules:
+
+  road_damage:
+    description: "AC 路面裂縫/坑洞偵測（單階段）"
+    enable: true
+    stage: 1
+    channels: [ch2, ch5]                    # 只對前(ch2)/後(ch5)兩路跑
+    weight: '2026-03-03-yolov11-road-damage'
+    conf: 0.3
+    desired_class_ids: [0, 1, 2, 3]         # 模型輸出的 4 類
+
+  bridge:
+    description: "橋樑結構異常偵測（可含 Stage2 分類）"
+    enable: true
+    stage: 1
+    channels: [ch1, ch2, ch3, ch4, ch5]     # 全 5 路
+    weight: '2026-04-01-yolov11s-2-phase'
+    conf: 0.3
+    # cls map: 0=spalled concrete, 1=corroded bolt, 2=expansion joint, 3=normal drainage hole,
+    #          4=abnormal drainage hole, 5=normal bolt, 6=block expansion joint,
+    #          7=rust steel pipe, 8=barrier damage, 9=blocked drainage hole
+    desired_class_ids: [0, 1, 4, 6, 7, 8, 9]  # 異常類（紅色），其餘為正常（綠色）
+
+    stage2:
+      description: "伸縮縫第二階段分類（高低差 / 阻塞）"
+      enable: true                          # M5 驗證開啟
+      method: 'yolo_cls'                    # 'yolo_cls' | 'vlm' | 'none'
+      trigger_class_ids: [2, 6]             # 偵測到這些類才觸發 Stage2
+      per_channel:
+        ch1: { weight: '2025-07-02-expansion_joint_height_cls', conf: 0.3, task: height, normal_class_name: 'no_height_difference' }
+        ch3: { weight: '2025-07-02-expansion_joint_height_cls', conf: 0.3, task: height, normal_class_name: 'no_height_difference' }
+        ch4: { weight: '2025-07-02-expansion_joint_gap_cls',    conf: 0.1, task: gap,    normal_class_name: 'normal_expansion_joint' }
+
+# ── VLM（多模態 LLM）設定 ─────────────────────────────────────────────
+vlm:
+  provider: qwen_local      # gemini | claude | qwen_local
+  model: Qwen/Qwen2-VL-7B-Instruct-AWQ
+
+  # ▼ 填入您的 API Key
+  api_key_gemini: ""        # Google AI Studio → aistudio.google.com
+  api_key_claude: ""        # Anthropic Console → console.anthropic.com
+
+  # Qwen 本地 vLLM server（provider: qwen_local 時生效）
+  qwen_base_url: "http://127.0.0.1:8000/v1"
+
+  # LLM 觸發的 channel（需與 stage2.trigger_class_ids 搭配）
+  vlm_channels: [ch1, ch3, ch4]
+
+  # 每個 channel queue 上限（0 = 無限）；超過則丟棄最舊的 job
+  queue_max_size: 0
+
+  # 同一 channel 兩次送件最短間隔（秒）；0 = 不限制
+  cooldown_sec: 5
+
+# ── Per-channel 額外規則（跨模組過濾） ────────────────────────────
+channel_rules:
+  ch4:
+    bridge_allowed_class_ids: [6]           # back-down 只顯示 cls 6（block expansion joint）
+  ch2:
+    road_filter_bbox_y_ratio: 0.5           # front：bbox 中心 y > 0.5*H 則忽略
+  ch5:
+    road_filter_bbox_y_ratio: 0.5           # back：同 ch2
+# ─────────────────────────────────────────────────────────────────
+
+# Model inference settings（向下相容，M4 後由 detection_modules 取代）
+weight: yolov11-road-damage
+confidence: 0.3
+confidence_post: 0.6
+iou: 0.7
+
+# 0: Video file, 1: Webcam stream
+source: 0
+
+# Video file path
+# test_video_dir: /media/itri/Transcend/firetruck/TTS_videos/det_right
+# test_video_dir: /media/itri/Transcend/firetruck/TTS_videos/det_wrong
+# test_video_dir: /media/itri/Transcend/firetruck/TTS_videos/error_case
+# test_video_dir: /home/itri/Desktop/20250430 消防車辨識結果/
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/20250430 新竹消防車辨識結果/小台消防車
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/20250430 新竹消防車辨識結果/錯誤 #marked as error for testing
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/20250430 銅鑼消防車辨識結果/正確
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/20250430 銅鑼消防車辨識結果/錯誤 #紫色公車
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/20250626漏辨識消防車/20250626
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/新竹-20250611T021108Z-1-001/新竹/正確
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/新竹-20250611T021108Z-1-001/新竹/錯誤 #marked as error for testing
+# test_video_dir: /home/itri/Desktop/消防車辨識結果/銅鑼-20250611T021109Z-1-001/銅鑼/錯誤
+# test_video_dir: /home/itri/Desktop/消防車 正式影片/20250315-生醫園區/日間
+# test_video_dir: /home/itri/Desktop/消防車 正式影片/20250315-生醫園區/夜間
+# test_video_dir: /home/itri/Desktop/消防車 正式影片/20250316 銅鑼園區
+test_video_dir: /home/itriu100/Firetruck_Project-AC_road_Inference_ROS/videos
+# test_video_dir: /home/itri/Desktop/測試/原本錯的
+# test_video_dir: /home/itri/Desktop/測試/雨天
+# test_video_dir: /home/itri/Desktop/測試/白車
+# test_video_dir: /home/itri/Desktop/測試/黑車
+# test_video_dir: /home/itri/Desktop/測試/紅色貨車
+# test_video_dir: /home/itri/Desktop/測試/紫色貨車-公車
+# test_video_dir: /home/itri/Desktop/測試/三角錐
+# test_video_dir: /home/itri/Desktop/測試/20260107辨識錯誤車輛
+# test_video_dir: /home/itri/Desktop/測試/1141205錯誤消防車影像抓取/生醫
+# test_video_dir: /home/itri/Desktop/測試/1141205錯誤消防車影像抓取/新竹
+# test_video_dir: /home/itri/Desktop/測試/20260127漏辨識消防車
+# test_video_dir: /home/itri/Desktop/測試/20260202生醫漏辨識消防車
+
+# test_video_dir: /home/itri/Desktop/train_data/testing/right
+# test_video_dir: /home/itri/Desktop/train_data/testing/wrong/other-car
+# test_video_dir: //home/itri/Desktop/train_data/testing/wrong/red-car
+
+
+#  Email sending settings
+mail_user:  'seedtek06@gmail.com'
+mail_password:  'zhqwjdsjanrliiiq'
+mail_subject: "[消防案測試] 消防車入區通報，無鳴笛"
+email_list:
+  - 'seedtek11@gmail.com'
+  - 'chento7611@gmail.com'
+  # - 'jeff4209@gmail.com'
+
+# Location information (ch1=right, ch2=front, ch3=left, ch4=back-down, ch5=back)
+ch1_location: 'ch1 Right →'
+ch2_location: 'ch2 Front ↑'
+ch3_location: 'ch3 Left ←'
+ch4_location: 'ch4 Back-Down ↙'
+ch5_location: 'ch5 Back ↓'
+
+# IP address of the cameras
+ch1_cctv_IP: 0
+ch2_cctv_IP: 0
+ch3_cctv_IP: 0
+ch4_cctv_IP: 0
+ch5_cctv_IP: 0
+
+# Web API
+web_api_url: "http://192.168.111.89:8200/DetectFireCarAPI.asmx/RequestFireCarData"
+ch1_camera_id: 2000
+ch2_camera_id: 2001
+ch3_camera_id: 2002
+ch4_camera_id: 2003
+ch5_camera_id: 2004
+
+# detection result image data
+result_img_path: 'detection_result_image_data'
+
+# Font name (.ttf file stored in the font folder)
+font: 'GenJyuuGothic-Normal'

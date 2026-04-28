@@ -1,0 +1,6 @@
+path: /home/user/Rex/firtruck-detection/project_firetruck # dataset root dir
+train: ./datasets/images/train # train images
+val: ./datasets/images/val # val images
+
+nc: 1
+names: ['firetruck']

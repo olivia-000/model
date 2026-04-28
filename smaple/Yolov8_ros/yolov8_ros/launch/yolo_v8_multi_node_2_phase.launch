@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <!-- Common Parameters -->
+  <arg name="ptweight_path" default="$(find yolov8_ros)/weights/2026-04-01-yolov11s-2-phase.pt" />
+  <arg name="rtweight_path" default="$(find yolov8_ros)/weights/2026-04-01-yolov11s-2-phase.engine" />
+ 
+  <arg name="expansion_joint_gap_rt_weight_path" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_gap_cls.engine" />
+  <arg name="expansion_joint_height_rt_weight_path" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_height_cls.engine" />
+  <arg name="expansion_joint_gap_pt_weight_path" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_gap_cls.pt" />
+  <arg name="expansion_joint_height_pt_weight_path" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_height_cls.pt" /> 
+ 
+  <arg name="tensorrt" default="False" />
+  <arg name="device" default="cuda" />
+  <arg name="camera_frame" default="camera_frame" />
+  <arg name="conf_threshold" default="0.3" />
+  <arg name="expansion_joint_gap_conf" default="0.1" />
+  <arg name="expansion_joint_height_conf" default="0.3" />
+  <arg name="desired_class_ids" default="[0,1,4,6,7,8,9]" />
+  
+  
+  <!-- Camera Topics -->
+  <arg name="camera_topic_0" default="/cam/right_120/raw" />
+  <arg name="camera_topic_1" default="/cam/front_120/raw" />
+  <arg name="camera_topic_2" default="/cam/left_120/raw" />
+  <arg name="camera_topic_3" default="/cam/back_120_1/raw" />
+  <arg name="camera_topic_4" default="/cam/back_120_2/raw" />
+
+  <!-- Node for Camera 0 -->
+  <node pkg="yolov8_ros" type="yolov8_multi_node_2_phase.py" name="yolov8_multi_node_0" output="screen">
+    <param name="camera_id" value="0" />
+    <param name="direction" value="right" />
+    <param name="camera_topic" value="$(arg camera_topic_0)" />
+    <param name="pub_topic_bounding_boxes" value="/yolov8/right_120/BoundingBoxes" />
+    <param name="pub_topic_detection_image" value="/right_120/detection_image" />
+    <param name="pub_topic_filtered_image_bbox" value="/right_120/filter_image_bbox" />
+    <param name="ptweight_path" value="$(arg ptweight_path)" />
+    <param name="rtweight_path" value="$(arg rtweight_path)" />
+	<param name="expansion_joint_gap_rt_weight_path" value="$(arg expansion_joint_gap_rt_weight_path)" />
+    <param name="expansion_joint_height_rt_weight_path" value="$(arg expansion_joint_height_rt_weight_path)" />
+	<param name="expansion_joint_gap_pt_weight_path" value="$(arg expansion_joint_gap_pt_weight_path)" />
+    <param name="expansion_joint_height_pt_weight_path" value="$(arg expansion_joint_height_pt_weight_path)" />
+    <param name="tensorrt" value="$(arg tensorrt)" />
+    <param name="device" value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="conf_threshold" value="$(arg conf_threshold)" />
+	<param name="expansion_joint_gap_conf" value="$(arg expansion_joint_gap_conf)" />
+	<param name="expansion_joint_height_conf" value="$(arg expansion_joint_height_conf)" />
+    <param name="desired_class_ids" value="$(arg desired_class_ids)" />
+  </node>
+
+  <!-- Node for Camera 1 -->
+  <node pkg="yolov8_ros" type="yolov8_multi_node_2_phase.py" name="yolov8_multi_node_1" output="screen">
+    <param name="camera_id" value="1" />
+    <param name="direction" value="front" />
+    <param name="camera_topic" value="$(arg camera_topic_1)" />
+    <param name="pub_topic_bounding_boxes" value="/yolov8/front_120/BoundingBoxes" />
+    <param name="pub_topic_detection_image" value="/front_120/detection_image" />
+    <param name="pub_topic_filtered_image_bbox" value="/front_120/filter_image_bbox" />
+    <param name="ptweight_path" value="$(arg ptweight_path)" />
+    <param name="rtweight_path" value="$(arg rtweight_path)" />
+	<param name="expansion_joint_gap_rt_weight_path" value="$(arg expansion_joint_gap_rt_weight_path)" />
+    <param name="expansion_joint_height_rt_weight_path" value="$(arg expansion_joint_height_rt_weight_path)" />
+	<param name="expansion_joint_gap_pt_weight_path" value="$(arg expansion_joint_gap_pt_weight_path)" />
+    <param name="expansion_joint_height_pt_weight_path" value="$(arg expansion_joint_height_pt_weight_path)" />
+    <param name="tensorrt" value="$(arg tensorrt)" />
+    <param name="device" value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="conf_threshold" value="$(arg conf_threshold)" />
+	<param name="expansion_joint_gap_conf" value="$(arg expansion_joint_gap_conf)" />
+	<param name="expansion_joint_height_conf" value="$(arg expansion_joint_height_conf)" />
+    <param name="desired_class_ids" value="$(arg desired_class_ids)" />
+  </node>
+
+  <!-- Node for Camera 2 -->
+  <node pkg="yolov8_ros" type="yolov8_multi_node_2_phase.py" name="yolov8_multi_node_2" output="screen">
+    <param name="camera_id" value="2" />
+    <param name="direction" value="left" />
+    <param name="camera_topic" value="$(arg camera_topic_2)" />
+    <param name="pub_topic_bounding_boxes" value="/yolov8/left_120/BoundingBoxes" />
+    <param name="pub_topic_detection_image" value="/left_120/detection_image" />
+    <param name="pub_topic_filtered_image_bbox" value="/left_120/filter_image_bbox" />
+    <param name="ptweight_path" value="$(arg ptweight_path)" />
+    <param name="rtweight_path" value="$(arg rtweight_path)" />
+	<param name="expansion_joint_gap_rt_weight_path" value="$(arg expansion_joint_gap_rt_weight_path)" />
+    <param name="expansion_joint_height_rt_weight_path" value="$(arg expansion_joint_height_rt_weight_path)" />
+	<param name="expansion_joint_gap_pt_weight_path" value="$(arg expansion_joint_gap_pt_weight_path)" />
+    <param name="expansion_joint_height_pt_weight_path" value="$(arg expansion_joint_height_pt_weight_path)" />
+    <param name="tensorrt" value="$(arg tensorrt)" />
+    <param name="device" value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="conf_threshold" value="$(arg conf_threshold)" />
+	<param name="expansion_joint_gap_conf" value="$(arg expansion_joint_gap_conf)" />
+	<param name="expansion_joint_height_conf" value="$(arg expansion_joint_height_conf)" />
+    <param name="desired_class_ids" value="$(arg desired_class_ids)" />
+  </node>
+
+  <!-- Node for Camera 3 -->
+  <node pkg="yolov8_ros" type="yolov8_multi_node_2_phase.py" name="yolov8_multi_node_3" output="screen">
+    <param name="camera_id" value="3" />
+    <param name="direction" value="back-down" />
+    <param name="camera_topic" value="$(arg camera_topic_3)" />
+    <param name="pub_topic_bounding_boxes" value="/yolov8/back_120_1/BoundingBoxes" />
+    <param name="pub_topic_detection_image" value="/back_120_1/detection_image" />
+    <param name="pub_topic_filtered_image_bbox" value="/back_120_1/filter_image_bbox" />
+    <param name="ptweight_path" value="$(arg ptweight_path)" />
+    <param name="rtweight_path" value="$(arg rtweight_path)" />
+	<param name="expansion_joint_gap_rt_weight_path" value="$(arg expansion_joint_gap_rt_weight_path)" />
+    <param name="expansion_joint_height_rt_weight_path" value="$(arg expansion_joint_height_rt_weight_path)" />
+	<param name="expansion_joint_gap_pt_weight_path" value="$(arg expansion_joint_gap_pt_weight_path)" />
+    <param name="expansion_joint_height_pt_weight_path" value="$(arg expansion_joint_height_pt_weight_path)" />
+    <param name="tensorrt" value="$(arg tensorrt)" />
+    <param name="device" value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="conf_threshold" value="$(arg conf_threshold)" />
+	<param name="expansion_joint_gap_conf" value="$(arg expansion_joint_gap_conf)" />
+	<param name="expansion_joint_height_conf" value="$(arg expansion_joint_height_conf)" />
+    <param name="desired_class_ids" value="$(arg desired_class_ids)" />
+  </node>
+
+  <!-- Node for Camera 4 -->
+  <node pkg="yolov8_ros" type="yolov8_multi_node_2_phase.py" name="yolov8_multi_node_4" output="screen">
+    <param name="camera_id" value="4" />
+    <param name="direction" value="back" />
+    <param name="camera_topic" value="$(arg camera_topic_4)" />
+    <param name="pub_topic_bounding_boxes" value="/yolov8/back_120_2/BoundingBoxes" />
+    <param name="pub_topic_detection_image" value="/back_120_2/detection_image" />
+    <param name="pub_topic_filtered_image_bbox" value="/back_120_2/filter_image_bbox" />
+    <param name="ptweight_path" value="$(arg ptweight_path)" />
+    <param name="rtweight_path" value="$(arg rtweight_path)" />
+	<param name="expansion_joint_gap_rt_weight_path" value="$(arg expansion_joint_gap_rt_weight_path)" />
+    <param name="expansion_joint_height_rt_weight_path" value="$(arg expansion_joint_height_rt_weight_path)" />
+	<param name="expansion_joint_gap_pt_weight_path" value="$(arg expansion_joint_gap_pt_weight_path)" />
+    <param name="expansion_joint_height_pt_weight_path" value="$(arg expansion_joint_height_pt_weight_path)" />
+    <param name="tensorrt" value="$(arg tensorrt)" />
+    <param name="device" value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="conf_threshold" value="$(arg conf_threshold)" />
+	<param name="expansion_joint_gap_conf" value="$(arg expansion_joint_gap_conf)" />
+	<param name="expansion_joint_height_conf" value="$(arg expansion_joint_height_conf)" />
+    <param name="desired_class_ids" value="$(arg desired_class_ids)" />
+  </node>
+
+</launch>
+

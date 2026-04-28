@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <!-- ── 模型權重路徑 ───────────────────────────────────────────────── -->
+  <arg name="bridge_pt_weight" default="$(find yolov8_ros)/weights/2026-04-01-yolov11s-2-phase.pt" />
+  <arg name="bridge_rt_weight" default="$(find yolov8_ros)/weights/2026-04-01-yolov11s-2-phase.engine" />
+  <arg name="road_pt_weight"   default="$(find yolov8_ros)/weights/2026-03-03-yolov11-road-damage.pt" />
+  <arg name="road_rt_weight"   default="$(find yolov8_ros)/weights/2026-03-03-yolov11-road-damage.engine" />
+  <arg name="height_pt_weight" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_height_cls.pt" />
+  <arg name="height_rt_weight" default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_height_cls.engine" />
+  <arg name="gap_pt_weight"    default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_gap_cls.pt" />
+  <arg name="gap_rt_weight"    default="$(find yolov8_ros)/weights/2025-07-02-expansion_joint_gap_cls.engine" />
+
+  <!-- ── 推論設定 ──────────────────────────────────────────────────── -->
+  <arg name="tensorrt"    default="False" />
+  <arg name="device"      default="cuda" />
+  <arg name="camera_frame" default="camera_frame" />
+  <arg name="bridge_conf" default="0.3" />
+  <arg name="road_conf"   default="0.3" />
+  <arg name="height_conf" default="0.3" />
+  <arg name="gap_conf"    default="0.1" />
+
+  <!-- ── ApproximateTimeSynchronizer 容許時間差（秒）────────────────── -->
+  <arg name="sync_slop"   default="0.05" />
+
+  <!-- ── 各路規則 ──────────────────────────────────────────────────── -->
+  <!-- 路面偵測 bbox 中心 y / 影像高度比值；超過此比例的框視為誤檢並忽略 -->
+  <arg name="road_filter_y_ratio" default="0.5" />
+
+  <!-- ── 5 路相機 Topic ──────────────────────────────────────────────── -->
+  <arg name="camera_topic_0" default="/cam/right_120/raw" />   <!-- ch1：右側   -->
+  <arg name="camera_topic_1" default="/cam/front_120/raw" />   <!-- ch2：前方   -->
+  <arg name="camera_topic_2" default="/cam/left_120/raw" />    <!-- ch3：左側   -->
+  <arg name="camera_topic_3" default="/cam/back_120_1/raw" />  <!-- ch4：後下方 -->
+  <arg name="camera_topic_4" default="/cam/back_120_2/raw" />  <!-- ch5：後方   -->
+
+  <!-- ── 統合偵測節點 ───────────────────────────────────────────────── -->
+  <node pkg="yolov8_ros"
+        type="multi_camera_detection_node.py"
+        name="multi_camera_detection_node"
+        output="screen">
+
+    <param name="bridge_pt_weight" value="$(arg bridge_pt_weight)" />
+    <param name="bridge_rt_weight" value="$(arg bridge_rt_weight)" />
+    <param name="road_pt_weight"   value="$(arg road_pt_weight)" />
+    <param name="road_rt_weight"   value="$(arg road_rt_weight)" />
+    <param name="height_pt_weight" value="$(arg height_pt_weight)" />
+    <param name="height_rt_weight" value="$(arg height_rt_weight)" />
+    <param name="gap_pt_weight"    value="$(arg gap_pt_weight)" />
+    <param name="gap_rt_weight"    value="$(arg gap_rt_weight)" />
+
+    <param name="tensorrt"    value="$(arg tensorrt)" />
+    <param name="device"      value="$(arg device)" />
+    <param name="camera_frame" value="$(arg camera_frame)" />
+    <param name="bridge_conf" value="$(arg bridge_conf)" />
+    <param name="road_conf"   value="$(arg road_conf)" />
+    <param name="height_conf" value="$(arg height_conf)" />
+    <param name="gap_conf"    value="$(arg gap_conf)" />
+
+    <param name="sync_slop"          value="$(arg sync_slop)" />
+    <param name="road_filter_y_ratio" value="$(arg road_filter_y_ratio)" />
+
+    <param name="camera_topic_0" value="$(arg camera_topic_0)" />
+    <param name="camera_topic_1" value="$(arg camera_topic_1)" />
+    <param name="camera_topic_2" value="$(arg camera_topic_2)" />
+    <param name="camera_topic_3" value="$(arg camera_topic_3)" />
+    <param name="camera_topic_4" value="$(arg camera_topic_4)" />
+  </node>
+
+</launch>
