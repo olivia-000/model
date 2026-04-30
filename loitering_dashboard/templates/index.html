@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoiteringGuard Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0d14;color:#c9d1e0;font-family:'IBM Plex Sans',sans-serif;font-size:13px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:0.5px solid #1e2535;background:#0f1118}
+.logo{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;color:#fff;letter-spacing:1px}
+.logo span{color:#38bdf8}
+.status-pill{display:flex;align-items:center;gap:7px;background:#111827;border:0.5px solid #1e2535;border-radius:20px;padding:5px 12px}
+.dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.dot.red{background:#ef4444;animation:none}
+.dot.gray{background:#475569;animation:none}
+.clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:#475569}
+.wrap{padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#111827;border:0.5px solid #1e2535;border-radius:8px;padding:12px 14px}
+.metric-label{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px}
+.metric-value{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;color:#e2e8f0}
+.metric-value.red{color:#ef4444}
+.metric-value.green{color:#22c55e}
+.metric-value.small{font-size:14px;padding-top:4px}
+.top-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:12px}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.card{background:#111827;border:0.5px solid #1e2535;border-radius:8px;overflow:hidden}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:0.5px solid #1e2535}
+.card-title{font-size:10px;font-weight:500;color:#475569;text-transform:uppercase;letter-spacing:0.8px}
+.badge-live{background:#ef4444;color:#fff;font-size:9px;font-weight:500;padding:2px 7px;border-radius:3px;font-family:'JetBrains Mono',monospace}
+.feed-img{width:100%;display:block;background:#060810}
+.no-feed{width:100%;aspect-ratio:4/3;background:#060810;display:flex;align-items:center;justify-content:center;color:#1e2535;font-family:'JetBrains Mono',monospace;font-size:11px}
+.alert-list{overflow-y:auto;max-height:300px}
+.alert-row{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:0.5px solid #0f1118}
+.alert-row:last-child{border-bottom:none}
+.adot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.adot.red{background:#ef4444}
+.adot.yellow{background:#facc15}
+.adot.gray{background:#2d3748}
+.ainfo{flex:1}
+.aid{font-size:12px;font-weight:500;color:#cbd5e1}
+.atime{font-size:10px;color:#475569;font-family:'JetBrains Mono',monospace}
+.abeh{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;margin-top:3px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.5px}
+.abeh.wandering{background:#3b1d1d;color:#ef4444}
+.abeh.stationary{background:#3b2a0a;color:#facc15}
+.abeh.circling{background:#1a2e3b;color:#38bdf8}
+.abeh.traversing{background:#0f2a1a;color:#22c55e}
+.abeh.tracking{background:#1a1f2e;color:#475569}
+.adur{font-size:11px;color:#64748b;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.legend{display:flex;gap:12px;padding:8px 14px;border-top:0.5px solid #1e2535;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:#475569}
+.leg-dot{width:7px;height:7px;border-radius:50%}
+.heatbar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:0.5px solid #1e2535}
+.heatbar-label{font-size:9px;color:#475569;white-space:nowrap}
+.heatbar-gradient{flex:1;height:6px;border-radius:3px;background:linear-gradient(to right,#000080,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000)}
+.sys-row{display:flex;justify-content:space-between;padding:8px 14px;border-bottom:0.5px solid #0f1118;align-items:center}
+.sys-row:last-child{border-bottom:none}
+.sk{font-size:11px;color:#475569}
+.sv{font-size:11px;color:#cbd5e1;font-family:'JetBrains Mono',monospace;font-weight:500}
+.sv.green{color:#22c55e}
+.sv.red{color:#ef4444}
+.sv.yellow{color:#facc15}
+.empty{padding:20px 14px;text-align:center;color:#2d3748;font-size:11px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Loitering<span>Guard</span></div>
+  <div class="status-pill">
+    <div class="dot" id="sys-dot"></div>
+    <span style="font-size:11px;color:#64748b" id="sys-text">Connecting...</span>
+  </div>
+  <div class="clock" id="clock"></div>
+</div>
+<div class="wrap">
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Active alerts</div><div class="metric-value red" id="m-active">—</div></div>
+    <div class="metric"><div class="metric-label">Persons detected</div><div class="metric-value" id="m-persons">—</div></div>
+    <div class="metric"><div class="metric-label">Total today</div><div class="metric-value" id="m-total">—</div></div>
+    <div class="metric"><div class="metric-label">Camera</div><div class="metric-value small green" id="m-camera">—</div></div>
+  </div>
+
+  <div class="top-grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Live feed — bounding box detection</span>
+        <span class="badge-live">LIVE</span>
+      </div>
+      <img class="feed-img" src="/video_feed_bbox" alt="bbox"
+           onerror="this.style.display='none';document.getElementById('no-bbox').style.display='flex'">
+      <div class="no-feed" id="no-bbox" style="display:none">No signal</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>Normal</div>
+        <div class="leg"><div class="leg-dot" style="background:#facc15"></div>Dwell</div>
+        <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>Loitering</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Alert log + behavior</span></div>
+      <div class="alert-list" id="alert-list"><div class="empty">No alerts yet</div></div>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Live feed — trajectory</span>
+        <span class="badge-live">LIVE</span>
+      </div>
+      <img class="feed-img" src="/video_feed_traj" alt="traj"
+           onerror="this.style.display='none';document.getElementById('no-traj').style.display='flex'">
+      <div class="no-feed" id="no-traj" style="display:none">No signal</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#38bdf8"></div>Trail</div>
+        <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>Loitering</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">Heatmap — dwell density</span></div>
+      <img class="feed-img" src="/video_feed_heat" alt="heatmap"
+           onerror="this.style.display='none';document.getElementById('no-heat').style.display='flex'">
+      <div class="no-feed" id="no-heat" style="display:none">No signal</div>
+      <div class="heatbar">
+        <span class="heatbar-label">Low</span>
+        <div class="heatbar-gradient"></div>
+        <span class="heatbar-label">High</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">System info</span></div>
+      <div class="sys-row"><span class="sk">ESP32-CAM IP</span><span class="sv" id="s-ip">—</span></div>
+      <div class="sys-row"><span class="sk">Camera</span><span class="sv" id="s-cam">—</span></div>
+      <div class="sys-row"><span class="sk">YOLO model</span><span class="sv" id="s-model">—</span></div>
+      <div class="sys-row"><span class="sk">Loiter threshold</span><span class="sv" id="s-loiter">—</span></div>
+      <div class="sys-row"><span class="sk">Conf threshold</span><span class="sv" id="s-conf">—</span></div>
+      <div class="sys-row"><span class="sk">FPS</span><span class="sv" id="s-fps">—</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB');}
+tick();setInterval(tick,1000);
+async function fetchStatus(){
+  try{
+    const d=await(await fetch('/api/status')).json();
+    document.getElementById('m-active').textContent=d.active_alerts;
+    document.getElementById('m-persons').textContent=d.persons_detected;
+    document.getElementById('m-total').textContent=d.total_today;
+    const cam=d.camera;
+    document.getElementById('m-camera').textContent=cam;
+    document.getElementById('m-camera').className='metric-value small '+(cam==='connected'?'green':'red');
+    document.getElementById('s-ip').textContent=d.esp32_ip;
+    document.getElementById('s-cam').textContent=cam;
+    document.getElementById('s-cam').className='sv '+(cam==='connected'?'green':'red');
+    document.getElementById('s-model').textContent=d.model;
+    document.getElementById('s-model').className='sv '+(d.model==='loaded'?'green':'yellow');
+    document.getElementById('s-loiter').textContent=d.loiter_threshold+'s';
+    document.getElementById('s-conf').textContent=d.conf_threshold;
+    document.getElementById('s-fps').textContent=d.fps;
+    document.getElementById('s-fps').className='sv '+(d.fps>=3?'green':d.fps>=1?'yellow':'red');
+    const dot=document.getElementById('sys-dot');
+    const txt=document.getElementById('sys-text');
+    if(cam==='connected'){dot.className='dot';txt.textContent='System online — heatmap + trajectory active';}
+    else{dot.className='dot gray';txt.textContent='Camera disconnected';}
+  }catch(e){}
+}
+async function fetchAlerts(){
+  try{
+    const alerts=await(await fetch('/api/alerts')).json();
+    const el=document.getElementById('alert-list');
+    if(!alerts.length){el.innerHTML='<div class="empty">No alerts yet</div>';return;}
+    el.innerHTML=alerts.map(a=>{
+      const cls=a.status==='loitering'?'red':a.status==='cleared'?'yellow':'gray';
+      const label=a.status==='loitering'?`ID ${a.id} — LOITERING`:a.status==='cleared'?`ID ${a.id} — cleared`:`ID ${a.id}`;
+      const beh=a.behavior||'tracking';
+      return `<div class="alert-row"><div class="adot ${cls}"></div><div class="ainfo"><div class="aid">${label}</div><div class="atime">${a.time}</div><span class="abeh ${beh}">${beh}</span></div><div class="adur">${a.duration}s</div></div>`;
+    }).join('');
+  }catch(e){}
+}
+fetchStatus();fetchAlerts();
+setInterval(fetchStatus,2000);setInterval(fetchAlerts,3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# 訓練資料集（太大，不上傳）
+person_dataset/
+INRIAPerson/
+PennFudanPed/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# CLAUDE.md (local assistant config)
+CLAUDE.md
