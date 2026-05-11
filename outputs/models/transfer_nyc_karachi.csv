@@ -1,0 +1,7 @@
+Scenario,Precision Macro,F1 Macro,Coverage,Note
+Karachi baseline,0.9524,0.9732,1.0,no transfer
+Zero-shot NYC->Karachi,0.3356,0.2711,1.0,0% target data
+Fine-tune 10%,1.0,1.0,1.0,10% target+src proba
+Fine-tune 20%,1.0,1.0,1.0,20% target+src proba
+Fine-tune 50%,1.0,1.0,1.0,50% target+src proba
+Teacher-Student (T=3.0),1.0,1.0,1.0,soft labels

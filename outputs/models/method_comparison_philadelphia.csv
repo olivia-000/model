@@ -1,0 +1,13 @@
+Method,Precision Macro,Precision Weighted,F1 Macro,Coverage,Threshold
+CatBoost (no threshold),0.4893,0.8338,0.5043,1.0,-
+LightGBM (no threshold),0.4994,0.835,0.5058,1.0,-
+XGBoost (no threshold),0.5,0.8363,0.5067,1.0,-
+RandomForest (no threshold),0.5051,0.8323,0.5053,1.0,-
+CatBoost raw + t=0.6,1.0,1.0,1.0,0.007,0.6
+CatBoost Platt + t=0.9,0.3104,0.8673,0.3215,0.662,0.9
+CatBoost Iso + t=0.3,0.6053,0.8391,0.302,1.0,0.3
+LightGBM Platt + t=0.9,0.3064,0.8447,0.3193,0.744,0.9
+XGBoost raw + t=0.8,0.5519,0.8599,0.5365,0.844,0.8
+RandomForest + t=0.8,0.5551,0.8474,0.5222,0.933,0.8
+CatBoost Platt + class-threshold,0.2718,0.6649,0.2994,1.0,per-class
+Two-Stage (dom_gap>0.3),0.2975,0.7968,0.3144,0.436,>0.3

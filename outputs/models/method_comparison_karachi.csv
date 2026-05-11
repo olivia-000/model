@@ -1,0 +1,9 @@
+Method,Precision Macro,Precision Weighted,F1 Macro,Coverage,Threshold
+CatBoost (no threshold),0.9167,0.9902,0.9501,1.0,-
+LightGBM (no threshold),1.0,1.0,1.0,1.0,-
+CatBoost raw + t=0.3,0.9167,0.9902,0.9501,1.0,0.3
+CatBoost Platt + t=0.95,0.4966,0.9864,0.4983,0.961,0.95
+CatBoost Iso + t=0.3,1.0,1.0,1.0,1.0,0.3
+LightGBM Platt + t=0.95,1.0,1.0,1.0,0.954,0.95
+CatBoost Platt + class-threshold,0.3181,0.9106,0.3255,1.0,per-class
+Two-Stage (dom_gap>0.3),0.4797,0.9206,0.4897,0.967,>0.3

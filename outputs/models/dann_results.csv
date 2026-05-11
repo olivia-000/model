@@ -1,0 +1,2 @@
+Source,Target,Source-only P,Source-only F1,DANN P,DANN F1,Improvement P,Improvement F1
+London,LA,0.0552,0.0947,0.4205,0.2582,0.3653,0.1634

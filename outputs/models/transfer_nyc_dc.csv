@@ -1,0 +1,7 @@
+Scenario,Precision Macro,F1 Macro,Coverage,Note
+DC baseline,0.5384,0.544,1.0,no transfer
+Zero-shot NYC->DC,0.5484,0.5533,1.0,0% target data
+Fine-tune 10%,0.5519,0.5562,1.0,10% target+src proba
+Fine-tune 20%,0.5564,0.5547,1.0,20% target+src proba
+Fine-tune 50%,0.5517,0.5457,1.0,50% target+src proba
+Teacher-Student (T=3.0),0.5577,0.5487,1.0,soft labels

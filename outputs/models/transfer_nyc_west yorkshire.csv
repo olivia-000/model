@@ -1,0 +1,7 @@
+Scenario,Precision Macro,F1 Macro,Coverage,Note
+West Yorkshire baseline,0.4753,0.4706,1.0,no transfer
+Zero-shot NYC->West Yorkshire,0.4786,0.4768,1.0,0% target data
+Fine-tune 10%,0.4816,0.4711,1.0,10% target+src proba
+Fine-tune 20%,0.4818,0.4715,1.0,20% target+src proba
+Fine-tune 50%,0.4803,0.4708,1.0,50% target+src proba
+Teacher-Student (T=3.0),0.4823,0.4728,1.0,soft labels

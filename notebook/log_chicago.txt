@@ -1,0 +1,389 @@
+Setup complete
+Total records: 19,182,747
+city
+NYC        8394926
+Chicago    6531182
+London     3395492
+LA          861147
+
+Date range: 2001-01-01 00:00:00 to 2026-02-28 23:00:00
+Data range: 2001-01-01 to 2024-12-31 (8765 days)
+Val  start: 2015-05-27
+Test start: 2020-03-14
+City: Chicago
+Train: 4,549,150 records  (up to 2015-05-27)
+Val:   1,034,559 records  (2015-05-27 – 2020-03-14)
+Test:  947,473 records  (2020-03-14 onwards)
+
+Building grid datasets...
+
+Train grids: 2,838
+Val   grids: 2,723
+Test  grids: 2,740
+
+Coordinate overlap (expected high): 700/704 (99.4%)
+Same location, different time -> NO leakage
+Feature columns (26):
+['lat_bin', 'lon_bin', 'lat_norm', 'lon_norm', 'density_pct', 'violent_pct', 'entropy_pct', 'dom_gap_pct', 'time_slot', 'is_weekend', 'log_count', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos', 'top1_ratio', 'dominance_gap', 'entropy', 'hist_violent', 'hist_property', 'hist_other', 'lag_violent', 'lag_property', 'lag_other']
+Feature functions defined
+Computing spatial lag on train grid (takes a few minutes)...
+Done
+Classes after merge: ['other' 'property' 'violent']
+
+Features: 26
+Train: 2,838  Val: 2,723  Test: 2,740
+
+Class distribution (Train):
+  other       :      9 (0.3%)
+  property    :  2,396 (84.4%)
+  violent     :    433 (15.3%)
+Class distribution (Test):
+  other       :     15 (0.5%)
+  property    :  2,185 (79.7%)
+  violent     :    540 (19.7%)
+
+⚠  Imbalance detected: smallest class = 0.3%
+
+Test hist_* coverage from train: 100.0%
+Classes: ['other' 'property' 'violent']
+Class weights: {np.int64(2): 2.184757505773672, np.int64(1): 0.39482470784641066, np.int64(0): 105.11111111111111}
+0:	learn: 0.9342045	test: 0.3951295	best: 0.3951295 (0)	total: 49.2ms	remaining: 1m 38s
+Stopped by overfitting detector  (150 iterations wait)
+
+bestTest = 0.4862082978
+bestIteration = 7
+
+Shrink model to first 8 iterations.
+CatBoost training complete
+[200]	valid_0's multi_logloss: 0.487535
+LightGBM training complete
+
+===== CatBoost [Chicago] TEST SET =====
+Precision macro    = 0.4812
+Precision weighted = 0.8055
+Recall macro       = 0.4922
+F1 macro           = 0.4858
+              precision    recall  f1-score   support
+
+       other       0.04      0.07      0.05        15
+    property       0.88      0.87      0.88      2185
+     violent       0.52      0.54      0.53       540
+
+    accuracy                           0.80      2740
+   macro avg       0.48      0.49      0.49      2740
+weighted avg       0.81      0.80      0.80      2740
+
+
+===== LightGBM [Chicago] TEST SET =====
+Precision macro    = 0.4764
+Precision weighted = 0.8008
+Recall macro       = 0.4522
+F1 macro           = 0.4618
+              precision    recall  f1-score   support
+
+       other       0.00      0.00      0.00        15
+    property       0.86      0.91      0.89      2185
+     violent       0.56      0.45      0.50       540
+
+    accuracy                           0.81      2740
+   macro avg       0.48      0.45      0.46      2740
+weighted avg       0.80      0.81      0.81      2740
+
+Calibration complete
+CatBoost raw   max_proba mean: 0.3638
+CatBoost Platt max_proba mean: 0.7527
+CatBoost Iso   max_proba mean: 0.7564
+Saved ../outputs/eda/reliability_chicago_CatBoost.png
+Saved ../outputs/eda/reliability_chicago_LightGBM.png
+
+--- CatBoost raw ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         2740           0.3814              0.7545    0.3000
+      0.35     0.914         2503           0.3654              0.7657    0.3004
+      0.40     0.000            0              NaN                 NaN       NaN
+      0.45     0.000            0              NaN                 NaN       NaN
+      0.50     0.000            0              NaN                 NaN       NaN
+      0.55     0.000            0              NaN                 NaN       NaN
+      0.60     0.000            0              NaN                 NaN       NaN
+      0.65     0.000            0              NaN                 NaN       NaN
+      0.70     0.000            0              NaN                 NaN       NaN
+      0.75     0.000            0              NaN                 NaN       NaN
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- CatBoost Platt ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         2740           0.2658              0.6359    0.2958
+      0.35     1.000         2740           0.2658              0.6359    0.2958
+      0.40     1.000         2740           0.2658              0.6359    0.2958
+      0.45     1.000         2740           0.2658              0.6359    0.2958
+      0.50     1.000         2740           0.2658              0.6359    0.2958
+      0.55     1.000         2740           0.2658              0.6359    0.2958
+      0.60     1.000         2740           0.2658              0.6359    0.2958
+      0.65     1.000         2740           0.2658              0.6359    0.2958
+      0.70     1.000         2740           0.2658              0.6359    0.2958
+      0.75     0.745         2042           0.2981              0.7996    0.3147
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- CatBoost Iso ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         2740           0.4844              0.7976    0.4485
+      0.35     1.000         2740           0.4844              0.7976    0.4485
+      0.40     1.000         2740           0.4844              0.7976    0.4485
+      0.45     1.000         2740           0.4844              0.7976    0.4485
+      0.50     1.000         2739           0.4845              0.7979    0.4488
+      0.55     0.981         2688           0.4859              0.8036    0.4515
+      0.60     0.916         2510           0.4992              0.8201    0.4463
+      0.65     0.883         2419           0.5039              0.8308    0.4558
+      0.70     0.835         2288           0.5090              0.8481    0.4709
+      0.75     0.814         2229           0.5107              0.8534    0.4767
+      0.80     0.303          830           0.3712              0.9456    0.3494
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- LightGBM raw ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         2740           0.4764              0.8008    0.4618
+      0.35     1.000         2740           0.4764              0.8008    0.4618
+      0.40     1.000         2739           0.4764              0.8008    0.4619
+      0.45     1.000         2739           0.4764              0.8008    0.4619
+      0.50     0.997         2731           0.4764              0.8017    0.4623
+      0.55     0.993         2721           0.4771              0.8040    0.4640
+      0.60     0.991         2716           0.4767              0.8044    0.4638
+      0.65     0.985         2699           0.4789              0.8081    0.4662
+      0.70     0.976         2675           0.4791              0.8111    0.4665
+      0.75     0.970         2659           0.4801              0.8125    0.4671
+      0.80     0.961         2633           0.4804              0.8138    0.4658
+      0.85     0.930         2549           0.4909              0.8246    0.4744
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- LightGBM Platt ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         2740           0.4762              0.8006    0.4628
+      0.35     1.000         2740           0.4762              0.8006    0.4628
+      0.40     1.000         2740           0.4762              0.8006    0.4628
+      0.45     1.000         2740           0.4762              0.8006    0.4628
+      0.50     1.000         2740           0.4762              0.8006    0.4628
+      0.55     0.996         2728           0.4766              0.8016    0.4636
+      0.60     0.994         2724           0.4765              0.8022    0.4637
+      0.65     0.993         2720           0.4763              0.8026    0.4635
+      0.70     0.988         2708           0.4778              0.8045    0.4648
+      0.75     0.980         2685           0.4781              0.8064    0.4646
+      0.80     0.964         2642           0.4798              0.8130    0.4667
+      0.85     0.805         2207           0.2930              0.7727    0.3119
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+Finding class-specific thresholds on VALIDATION set...
+  other          : threshold = 0.95
+  property       : threshold = 0.73
+  violent        : threshold = 0.95
+
+Applying to TEST set...
+Coverage: 0.903  Precision macro: 0.2806  F1: 0.3047
+              precision    recall  f1-score   support
+
+       other       0.00      0.00      0.00        15
+    property       0.84      1.00      0.91      2082
+     violent       0.00      0.00      0.00       376
+
+    accuracy                           0.84      2473
+   macro avg       0.28      0.33      0.30      2473
+weighted avg       0.71      0.84      0.77      2473
+
+Stable grids — Train: 46.8%  Val: 32.8%  Test: 31.2%
+0:	learn: 0.9943799	test: 0.7060981	best: 0.7060981 (0)	total: 2.84ms	remaining: 1.13s
+Stopped by overfitting detector  (40 iterations wait)
+
+bestTest = 0.7127510509
+bestIteration = 6
+
+Shrink model to first 7 iterations.
+
+Stage 1 predicted stable: 1,252/2,740 (45.7%)
+===== Two-Stage Model [Chicago] =====
+Coverage           = 0.457
+Precision macro    = 0.3078
+Precision weighted = 0.8525
+F1 macro           = 0.3200
+              precision    recall  f1-score   support
+
+       other       0.00      0.00      0.00         7
+    property       0.92      1.00      0.96      1156
+     violent       0.00      0.00      0.00        89
+
+    accuracy                           0.92      1252
+   macro avg       0.31      0.33      0.32      1252
+weighted avg       0.85      0.92      0.89      1252
+
+
+===== Method Comparison [Chicago] =====
+                          Method  Precision Macro  Precision Weighted  F1 Macro  Coverage Threshold
+         CatBoost (no threshold)           0.4812              0.8055    0.4858     1.000         -
+         LightGBM (no threshold)           0.4764              0.8008    0.4618     1.000         -
+            CatBoost raw + t=0.3           0.3814              0.7545    0.3000     1.000       0.3
+         CatBoost Platt + t=0.75           0.2981              0.7996    0.3147     0.745      0.75
+           CatBoost Iso + t=0.75           0.5107              0.8534    0.4767     0.814      0.75
+          LightGBM Platt + t=0.8           0.4798              0.8130    0.4667     0.964       0.8
+CatBoost Platt + class-threshold           0.2806              0.7088    0.3047     0.903 per-class
+         Two-Stage (dom_gap>0.3)           0.3078              0.8525    0.3200     0.457      >0.3
+Feature Domain Shift: NYC vs Chicago
+      feature    jsd
+   hist_other 0.7943
+hist_property 0.5077
+ hist_violent 0.4579
+      entropy 0.4238
+   top1_ratio 0.3432
+dominance_gap 0.2476
+    log_count 0.1359
+X_train: (2838, 26)  y_train: (2838,)
+X_val:   (2723, 26)    y_val:   (2723,)
+X_test:  (2740, 26)   y_test:  (2740,)
+proba_cat:       (2740, 3)
+proba_cat_platt: (2740, 3)
+proba_cat_val:   (2723, 3)
+Chicago grid distribution:
+Train: 
+dominant_category
+property    2396
+violent      433
+other          9
+
+Test: 
+dominant_category
+property    2185
+violent      540
+other         15
+NYC source model loaded
+Target Chicago: train=2,878 val=2,436 test=2,447
+
+[Baseline] Chicago trained from scratch...
+  Precision=0.4387  F1=0.4147
+
+[Zero-shot] NYC -> Chicago...
+  Precision=0.4568  F1=0.3857
+
+[Fine-tune 10%] NYC -> Chicago...
+  Precision=0.4366  F1=0.4115
+
+[Fine-tune 20%] NYC -> Chicago...
+  Precision=0.4373  F1=0.4138
+
+[Fine-tune 50%] NYC -> Chicago...
+  Precision=0.4391  F1=0.4124
+
+[Teacher-Student] NYC -> Chicago...
+  Precision=0.4282  F1=0.4262
+
+===== Transfer Results: NYC -> Chicago =====
+                    Scenario  Precision Macro  F1 Macro  Coverage                      Note
+            Chicago baseline           0.4387    0.4147       1.0               no transfer
+      NYC->Chicago zero-shot           0.4568    0.3857       1.0            0% target data
+Fine-tune 10% (src features)           0.4366    0.4115       1.0 10% target + source proba
+Fine-tune 20% (src features)           0.4373    0.4138       1.0 20% target + source proba
+Fine-tune 50% (src features)           0.4391    0.4124       1.0 50% target + source proba
+     Teacher-Student (T=3.0)           0.4282    0.4262       1.0               soft labels
+Chicago dominant category distribution:
+dominant_category
+property    2417
+violent      452
+other          9
+
+NYC le.classes_: ['other' 'property' 'violent']
+Grid risk scores: ../outputs/models/grid_risk_chicago.csv  (2,740 grids)
+Accuracy: 0.7974
+Confidence tier breakdown:
+confidence_tier
+medium    2740
+
+To run Chicago: change CITY = "Chicago" in Cell 3 and re-run from Cell 3.
+Test grid dominant category distribution:
+dominant_category
+property    2185
+violent      540
+other         15
+
+Val grid dominant category distribution:
+dominant_category
+property    2051
+violent      661
+other         11
+
+Train grid dominant category distribution:
+dominant_category
+property    2396
+violent      433
+other          9
+=== Clean Evaluation (exclude tiny-support classes) ===
+
+===== CatBoost [Chicago] — Meaningful Classes Only =====
+Excluded classes with support < 30
+Evaluated on: [np.str_('property'), np.str_('violent')]
+Precision macro    = 0.7033
+Precision weighted = 0.8142
+F1 macro           = 0.7039
+              precision    recall  f1-score   support
+
+    property       0.89      0.87      0.88      2185
+     violent       0.52      0.54      0.53       540
+
+   micro avg       0.81      0.80      0.81      2725
+   macro avg       0.70      0.70      0.70      2725
+weighted avg       0.81      0.80      0.81      2725
+
+
+===== LightGBM [Chicago] — Meaningful Classes Only =====
+Excluded classes with support < 30
+Evaluated on: [np.str_('property'), np.str_('violent')]
+Precision macro    = 0.7174
+Precision weighted = 0.8098
+F1 macro           = 0.6942
+              precision    recall  f1-score   support
+
+    property       0.87      0.91      0.89      2185
+     violent       0.56      0.45      0.50       540
+
+   micro avg       0.82      0.82      0.82      2725
+   macro avg       0.72      0.68      0.69      2725
+weighted avg       0.81      0.82      0.81      2725
+
+
+LightGBM Platt + t=0.45 (meaningful classes):
+Precision macro = 0.7172  Coverage = 1.000
+[Chicago] Saved: ../outputs/models/grid_risk_chicago.csv  (2,740 grids)
+  Accuracy:    0.7974
+  Conf tiers:  {'medium': 2740}
+[NYC] 3,501 grids loaded
+[NYC] Map saved: ../outputs/maps/map_nyc.html
+  Open in browser to view the interactive map.
+[Chicago] 2,740 grids loaded
+[Chicago] Map saved: ../outputs/maps/map_chicago.html
+  Open in browser to view the interactive map.
+
+Done! Open outputs/maps/map_nyc.html in your browser.
+Spatial only                         n= 4  P=0.4385  F1=0.4414
+Spatial + Temporal                   n=13  P=0.4095  F1=0.4047
+Spatial + Temporal + Relative        n=17  P=0.5025  F1=0.5132
+hist_* only                          n= 3  P=0.4485  F1=0.4564
+lag_* only                           n= 3  P=0.4308  F1=0.4157
+hist_* + lag_*                       n= 6  P=0.4918  F1=0.5025
+Stability features                   n= 3  P=0.4317  F1=0.4091
+All features (full model)            n=26  P=0.4867  F1=0.4872
+
+===== Feature Ablation Study [Chicago] =====
+                Feature Group  N Features  Precision Macro  Precision Weighted  F1 Macro
+Spatial + Temporal + Relative          17           0.5025              0.8086    0.5132
+               hist_* + lag_*           6           0.4918              0.8033    0.5025
+    All features (full model)          26           0.4867              0.8030    0.4872
+                  hist_* only           3           0.4485              0.8001    0.4564
+                 Spatial only           4           0.4385              0.7920    0.4414
+           Stability features           3           0.4317              0.8031    0.4091
+                   lag_* only           3           0.4308              0.7830    0.4157
+           Spatial + Temporal          13           0.4095              0.7594    0.4047
+Saved ablation_chicago.png

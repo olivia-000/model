@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+notebook/.ipynb_checkpoints/
+
+# CatBoost training logs
+catboost_info/
+notebook/catboost_info/
+
+# Large raw data files (>50MB)
+data/raw/nyc_raw.csv
+data/raw/chicago_raw.csv
+data/raw/london_clean.csv
+data/raw/la_raw.csv
+
+# Large processed data files (>50MB)
+data/processed/all_cities.csv
+data/processed/nyc_clean.csv
+data/processed/chicago_clean.csv
+data/processed/london_clean.csv
+data/processed/philadelphia_clean.csv
+data/processed/la_clean.csv
+data/processed/west_yorkshire_clean.csv
+
+# OS
+.DS_Store
+Thumbs.db

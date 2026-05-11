@@ -1,0 +1,565 @@
+Setup complete
+ACTUAL PATH: /home/itriu100/spatiotemporal-crime-transfer-learning-main/data/processed/all_cities.csv
+Total records: 21,538,969
+city
+NYC               8394926
+Chicago           6531182
+London            3395492
+Philadelphia      1258483
+West Yorkshire     916815
+LA                 861147
+DC                 180924
+
+Date range: 2001-01-01 00:00:00 to 2026-03-28 23:00:00
+Total records: 21,538,969
+
+City breakdown:
+city
+NYC               8394926
+Chicago           6531182
+London            3395492
+Philadelphia      1258483
+West Yorkshire     916815
+LA                 861147
+DC                 180924
+
+Karachi date range:
+  NaT to NaT
+  0 records
+['NYC' 'Chicago' 'LA' 'London' 'Philadelphia' 'DC' 'West Yorkshire']
+city
+NYC               8394926
+Chicago           6531182
+London            3395492
+Philadelphia      1258483
+West Yorkshire     916815
+LA                 861147
+DC                 180924
+Name: count, dtype: int64
+City: West Yorkshire  (grid_size=0.01)
+Date range: 2023-04-01 to 2026-03-28 (1092 days)
+Total records: 916,815
+
+Temporal split (60/20/20):
+  Train: 564,433  Val: 183,960  Test: 168,422
+Train grids: 6,274  Val: 5,119  Test: 4,940
+Coordinate overlap: 1,433/1,442 (99.4%)
+Feature columns (26):
+['lat_bin', 'lon_bin', 'lat_norm', 'lon_norm', 'density_pct', 'violent_pct', 'entropy_pct', 'dom_gap_pct', 'time_slot', 'is_weekend', 'log_count', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos', 'top1_ratio', 'dominance_gap', 'entropy', 'hist_violent', 'hist_property', 'hist_other', 'lag_violent', 'lag_property', 'lag_other']
+Feature functions defined
+Unique dominant categories in each split:
+Train: ['other', 'property', 'violent']
+Val:   ['other', 'property', 'violent']
+Test:  ['other', 'property', 'violent']
+Computing spatial lag on train grid (takes a few minutes)...
+Done
+Classes: ['other' 'property' 'violent']
+
+Features: 26
+Train: 6,274  Val: 5,119  Test: 4,940
+Train categories: [0 1 2] -> ['other' 'property' 'violent']
+Val   categories: [0 1 2]   -> ['other' 'property' 'violent']
+Test  categories: [0 1 2]  -> ['other' 'property' 'violent']
+Classes in train: ['other' 'property' 'violent']
+Classes in val:   ['other' 'property' 'violent']
+Classes in test:  ['other' 'property' 'violent']
+Val after filtering: 5,119 / 5,119
+0:	learn: 1.0495651	test: 1.0857154	best: 1.0857154 (0)	total: 55.6ms	remaining: 44.4s
+Stopped by overfitting detector  (80 iterations wait)
+
+bestTest = 1.032152423
+bestIteration = 11
+
+Shrink model to first 12 iterations.
+CatBoost training complete
+[100]	valid_0's multi_logloss: 1.45429
+LightGBM training complete
+XGBoost training complete  (best_iteration=44)
+Random Forest training complete
+
+===== CatBoost [West Yorkshire] TEST SET =====
+Precision macro    = 0.5053
+Precision weighted = 0.6582
+Recall macro       = 0.4965
+F1 macro           = 0.5003
+              precision    recall  f1-score   support
+
+       other       0.28      0.23      0.25       417
+    property       0.47      0.47      0.47      1187
+     violent       0.77      0.79      0.78      3336
+
+    accuracy                           0.66      4940
+   macro avg       0.51      0.50      0.50      4940
+weighted avg       0.66      0.66      0.66      4940
+
+
+===== LightGBM [West Yorkshire] TEST SET =====
+Precision macro    = 0.5073
+Precision weighted = 0.6584
+Recall macro       = 0.4974
+F1 macro           = 0.5007
+              precision    recall  f1-score   support
+
+       other       0.29      0.23      0.25       417
+    property       0.45      0.49      0.47      1187
+     violent       0.78      0.78      0.78      3336
+
+    accuracy                           0.66      4940
+   macro avg       0.51      0.50      0.50      4940
+weighted avg       0.66      0.66      0.66      4940
+
+
+===== XGBoost [West Yorkshire] TEST SET =====
+Precision macro    = 0.5154
+Precision weighted = 0.6621
+Recall macro       = 0.5023
+F1 macro           = 0.5069
+              precision    recall  f1-score   support
+
+       other       0.31      0.23      0.26       417
+    property       0.46      0.49      0.48      1187
+     violent       0.78      0.78      0.78      3336
+
+    accuracy                           0.67      4940
+   macro avg       0.52      0.50      0.51      4940
+weighted avg       0.66      0.67      0.66      4940
+
+
+===== RandomForest [West Yorkshire] TEST SET =====
+Precision macro    = 0.5152
+Precision weighted = 0.6621
+Recall macro       = 0.4954
+F1 macro           = 0.5028
+              precision    recall  f1-score   support
+
+       other       0.30      0.21      0.25       417
+    property       0.47      0.47      0.47      1187
+     violent       0.77      0.81      0.79      3336
+
+    accuracy                           0.67      4940
+   macro avg       0.52      0.50      0.50      4940
+weighted avg       0.66      0.67      0.67      4940
+
+Calibration complete
+CatBoost raw   max_proba mean: 0.5061
+CatBoost Platt max_proba mean: 0.6854
+CatBoost Iso   max_proba mean: 0.7002
+Saved ../outputs/eda/reliability_west yorkshire_CatBoost.png
+Saved ../outputs/eda/reliability_west yorkshire_LightGBM.png
+
+--- CatBoost raw ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.5053              0.6582    0.5003
+      0.35     0.997         4926           0.5061              0.6585    0.5002
+      0.40     0.925         4571           0.5180              0.6731    0.5111
+      0.45     0.852         4209           0.5281              0.6829    0.5209
+      0.50     0.760         3754           0.5375              0.6958    0.5313
+      0.55     0.000            0              NaN                 NaN       NaN
+      0.60     0.000            0              NaN                 NaN       NaN
+      0.65     0.000            0              NaN                 NaN       NaN
+      0.70     0.000            0              NaN                 NaN       NaN
+      0.75     0.000            0              NaN                 NaN       NaN
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- CatBoost Platt ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.4144              0.6150    0.4072
+      0.35     1.000         4940           0.4144              0.6150    0.4072
+      0.40     1.000         4940           0.4144              0.6150    0.4072
+      0.45     1.000         4940           0.4144              0.6150    0.4072
+      0.50     0.792         3911           0.2478              0.5529    0.2843
+      0.55     0.731         3611           0.2556              0.5880    0.2893
+      0.60     0.712         3517           0.2568              0.5933    0.2901
+      0.65     0.681         3363           0.2587              0.6023    0.2913
+      0.70     0.618         3052           0.2637              0.6256    0.2944
+      0.75     0.552         2725           0.2661              0.6371    0.2959
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- CatBoost Iso ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.5347              0.6480    0.4352
+      0.35     1.000         4940           0.5347              0.6480    0.4352
+      0.40     1.000         4940           0.5347              0.6480    0.4352
+      0.45     0.994         4912           0.5374              0.6500    0.4365
+      0.50     0.947         4676           0.5404              0.6614    0.4427
+      0.55     0.753         3720           0.3835              0.6440    0.3014
+      0.60     0.721         3563           0.3231              0.6241    0.2908
+      0.65     0.666         3291           0.3271              0.6412    0.2935
+      0.70     0.599         2961           0.3311              0.6588    0.2962
+      0.75     0.524         2590           0.2677              0.6450    0.2969
+      0.80     0.352         1741           0.2767              0.6889    0.3024
+      0.85     0.002           10           0.4500              0.8100    0.4737
+      0.90     0.002           10           0.4500              0.8100    0.4737
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- LightGBM raw ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.5073              0.6584    0.5007
+      0.35     1.000         4938           0.5067              0.6585    0.5002
+      0.40     0.980         4843           0.5114              0.6621    0.5048
+      0.45     0.920         4543           0.5155              0.6716    0.5121
+      0.50     0.896         4427           0.5203              0.6750    0.5168
+      0.55     0.883         4362           0.5210              0.6780    0.5175
+      0.60     0.872         4308           0.5233              0.6812    0.5196
+      0.65     0.839         4147           0.5287              0.6906    0.5272
+      0.70     0.000            0              NaN                 NaN       NaN
+      0.75     0.000            0              NaN                 NaN       NaN
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- LightGBM Platt ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.4147              0.6208    0.4205
+      0.35     1.000         4940           0.4147              0.6208    0.4205
+      0.40     1.000         4940           0.4147              0.6208    0.4205
+      0.45     1.000         4940           0.4147              0.6208    0.4205
+      0.50     0.718         3546           0.2562              0.5905    0.2897
+      0.55     0.706         3488           0.2580              0.5992    0.2909
+      0.60     0.694         3428           0.2581              0.5994    0.2909
+      0.65     0.674         3329           0.2593              0.6053    0.2917
+      0.70     0.599         2959           0.2642              0.6281    0.2947
+      0.75     0.586         2893           0.2657              0.6354    0.2957
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- XGBoost raw ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.5154              0.6621    0.5069
+      0.35     1.000         4940           0.5154              0.6621    0.5069
+      0.40     0.994         4912           0.5135              0.6621    0.5051
+      0.45     0.955         4719           0.5144              0.6671    0.5070
+      0.50     0.908         4487           0.5208              0.6766    0.5148
+      0.55     0.864         4269           0.5237              0.6831    0.5202
+      0.60     0.817         4037           0.5304              0.6973    0.5305
+      0.65     0.771         3808           0.5370              0.7041    0.5378
+      0.70     0.000            0              NaN                 NaN       NaN
+      0.75     0.000            0              NaN                 NaN       NaN
+      0.80     0.000            0              NaN                 NaN       NaN
+      0.85     0.000            0              NaN                 NaN       NaN
+      0.90     0.000            0              NaN                 NaN       NaN
+      0.95     0.000            0              NaN                 NaN       NaN
+
+--- RandomForest ---
+ threshold  coverage  n_predicted  precision_macro  precision_weighted  f1_macro
+      0.30     1.000         4940           0.5152              0.6621    0.5028
+      0.35     1.000         4940           0.5152              0.6621    0.5028
+      0.40     1.000         4940           0.5152              0.6621    0.5028
+      0.45     1.000         4939           0.5153              0.6624    0.5030
+      0.50     0.998         4928           0.5128              0.6620    0.5009
+      0.55     0.995         4916           0.5124              0.6624    0.5007
+      0.60     0.988         4879           0.5142              0.6632    0.5019
+      0.65     0.972         4801           0.5173              0.6664    0.5053
+      0.70     0.954         4713           0.5170              0.6677    0.5053
+      0.75     0.933         4608           0.5214              0.6715    0.5099
+      0.80     0.905         4470           0.5240              0.6774    0.5138
+      0.85     0.852         4208           0.5304              0.6911    0.5240
+      0.90     0.792         3911           0.5370              0.7040    0.5324
+      0.95     0.739         3649           0.5449              0.7143    0.5370
+Finding class-specific thresholds on VALIDATION set...
+  other          : threshold = 0.95
+  property       : threshold = 0.95
+  violent        : threshold = 0.70
+
+Applying to TEST set...
+Coverage: 0.618  Precision macro: 0.2637  F1: 0.2944
+              precision    recall  f1-score   support
+
+       other       0.00      0.00      0.00       183
+    property       0.00      0.00      0.00       455
+     violent       0.79      1.00      0.88      2414
+
+    accuracy                           0.79      3052
+   macro avg       0.26      0.33      0.29      3052
+weighted avg       0.63      0.79      0.70      3052
+
+Stable grids — Train: 25.9%  Val: 33.3%  Test: 33.5%
+0:	learn: 0.9990778	test: 0.4109318	best: 0.4109318 (0)	total: 3.52ms	remaining: 1.41s
+Stopped by overfitting detector  (40 iterations wait)
+
+bestTest = 0.4109318406
+bestIteration = 0
+
+Shrink model to first 1 iterations.
+
+Stage 1 predicted stable: 1,278/4,940 (25.9%)
+===== Two-Stage Model [West Yorkshire] =====
+Coverage           = 0.259
+Precision macro    = 0.4558
+Precision weighted = 0.6820
+F1 macro           = 0.4624
+              precision    recall  f1-score   support
+
+       other       0.00      0.00      0.00       101
+    property       0.57      0.51      0.54       284
+     violent       0.79      0.91      0.85       893
+
+    accuracy                           0.75      1278
+   macro avg       0.46      0.47      0.46      1278
+weighted avg       0.68      0.75      0.71      1278
+
+
+===== Method Comparison [West Yorkshire] =====
+                          Method  Precision Macro  Precision Weighted  F1 Macro  Coverage Threshold
+         CatBoost (no threshold)           0.5053              0.6582    0.5003     1.000         -
+         LightGBM (no threshold)           0.5073              0.6584    0.5007     1.000         -
+          XGBoost (no threshold)           0.5154              0.6621    0.5069     1.000         -
+     RandomForest (no threshold)           0.5152              0.6621    0.5028     1.000         -
+            CatBoost raw + t=0.5           0.5375              0.6958    0.5313     0.760       0.5
+          CatBoost Platt + t=0.3           0.4144              0.6150    0.4072     1.000       0.3
+            CatBoost Iso + t=0.5           0.5404              0.6614    0.4427     0.947       0.5
+          LightGBM Platt + t=0.3           0.4147              0.6208    0.4205     1.000       0.3
+            XGBoost raw + t=0.65           0.5370              0.7041    0.5378     0.771      0.65
+           RandomForest + t=0.95           0.5449              0.7143    0.5370     0.739      0.95
+CatBoost Platt + class-threshold           0.2637              0.6256    0.2944     0.618 per-class
+         Two-Stage (dom_gap>0.3)           0.4558              0.6820    0.4624     0.259      >0.3
+Feature Domain Shift: NYC vs Chicago
+      feature    jsd
+   hist_other 0.7943
+hist_property 0.5077
+ hist_violent 0.4579
+      entropy 0.4238
+   top1_ratio 0.3432
+dominance_gap 0.2476
+    log_count 0.1359
+X_train: (6274, 26)  y_train: (6274,)
+X_val:   (5119, 26)    y_val:   (5119,)
+X_test:  (4940, 26)   y_test:  (4940,)
+proba_cat:       (4940, 3)
+proba_cat_platt: (4940, 3)
+proba_cat_val:   (5119, 3)
+Chicago grid distribution:
+Train: 
+dominant_category
+violent     4061
+property    1677
+other        536
+
+Test: 
+dominant_category
+violent     3336
+property    1187
+other        417
+NYC source model loaded
+Target West Yorkshire: train=7,445 val=6,572 test=6,405
+Train classes: ['other' 'property' 'violent']
+NYC source model loaded
+
+[Baseline] West Yorkshire from scratch...
+  Precision=0.4753  F1=0.4706
+
+[Zero-shot] NYC -> West Yorkshire...
+  Precision=0.4786  F1=0.4768
+
+[Fine-tune 10%]...
+  Precision=0.4816  F1=0.4711
+
+[Fine-tune 20%]...
+  Precision=0.4818  F1=0.4715
+
+[Fine-tune 50%]...
+  Precision=0.4803  F1=0.4708
+
+[Teacher-Student] NYC -> West Yorkshire...
+  Precision=0.4823  F1=0.4728
+
+===== Transfer: NYC -> West Yorkshire =====
+                     Scenario  Precision Macro  F1 Macro  Coverage                 Note
+      West Yorkshire baseline           0.4753    0.4706       1.0          no transfer
+Zero-shot NYC->West Yorkshire           0.4786    0.4768       1.0       0% target data
+                Fine-tune 10%           0.4816    0.4711       1.0 10% target+src proba
+                Fine-tune 20%           0.4818    0.4715       1.0 20% target+src proba
+                Fine-tune 50%           0.4803    0.4708       1.0 50% target+src proba
+      Teacher-Student (T=3.0)           0.4823    0.4728       1.0          soft labels
+Target West Yorkshire: train=7,445 val=6,572 test=6,405
+Train classes: ['other' 'property' 'violent']
+NYC source model loaded
+
+[Baseline] West Yorkshire from scratch...
+  Precision=0.4753  F1=0.4706
+
+[Zero-shot] Chicago -> West Yorkshire...
+  Precision=0.4786  F1=0.4768
+
+[Fine-tune 10%]...
+  Precision=0.4816  F1=0.4711
+
+[Fine-tune 20%]...
+  Precision=0.4818  F1=0.4715
+
+[Fine-tune 50%]...
+  Precision=0.4803  F1=0.4708
+
+[Teacher-Student] Chicago -> West Yorkshire...
+  Precision=0.4823  F1=0.4728
+
+===== Transfer: Chicago -> West Yorkshire =====
+                         Scenario  Precision Macro  F1 Macro  Coverage                 Note
+          West Yorkshire baseline           0.4753    0.4706       1.0          no transfer
+Zero-shot Chicago->West Yorkshire           0.4786    0.4768       1.0       0% target data
+                    Fine-tune 10%           0.4816    0.4711       1.0 10% target+src proba
+                    Fine-tune 20%           0.4818    0.4715       1.0 20% target+src proba
+                    Fine-tune 50%           0.4803    0.4708       1.0 50% target+src proba
+          Teacher-Student (T=3.0)           0.4823    0.4728       1.0          soft labels
+Chicago dominant category distribution:
+dominant_category
+violent     4544
+property    2133
+other        768
+
+NYC le.classes_: ['other' 'property' 'violent']
+Grid risk scores: ../outputs/models/grid_risk_west yorkshire.csv  (4,940 grids)
+Accuracy: 0.6927
+Confidence tier breakdown:
+confidence_tier
+medium       3611
+uncertain    1329
+
+To run Chicago: change CITY = "Chicago" in Cell 3 and re-run from Cell 3.
+Test grid dominant category distribution:
+dominant_category
+violent     3336
+property    1187
+other        417
+
+Val grid dominant category distribution:
+dominant_category
+violent     3489
+property    1138
+other        492
+
+Train grid dominant category distribution:
+dominant_category
+violent     4061
+property    1677
+other        536
+=== Clean Evaluation (exclude tiny-support classes) ===
+
+===== CatBoost [West Yorkshire] — Meaningful Classes Only =====
+Excluded classes with support < 30
+Evaluated on: [np.str_('other'), np.str_('property'), np.str_('violent')]
+Precision macro    = 0.5053
+Precision weighted = 0.6582
+F1 macro           = 0.5003
+              precision    recall  f1-score   support
+
+       other       0.28      0.23      0.25       417
+    property       0.47      0.47      0.47      1187
+     violent       0.77      0.79      0.78      3336
+
+    accuracy                           0.66      4940
+   macro avg       0.51      0.50      0.50      4940
+weighted avg       0.66      0.66      0.66      4940
+
+
+===== LightGBM [West Yorkshire] — Meaningful Classes Only =====
+Excluded classes with support < 30
+Evaluated on: [np.str_('other'), np.str_('property'), np.str_('violent')]
+Precision macro    = 0.5073
+Precision weighted = 0.6584
+F1 macro           = 0.5007
+              precision    recall  f1-score   support
+
+       other       0.29      0.23      0.25       417
+    property       0.45      0.49      0.47      1187
+     violent       0.78      0.78      0.78      3336
+
+    accuracy                           0.66      4940
+   macro avg       0.51      0.50      0.50      4940
+weighted avg       0.66      0.66      0.66      4940
+
+
+LightGBM Platt + t=0.45 (meaningful classes):
+Precision macro = 0.4147  Coverage = 1.000
+[West Yorkshire] Saved: ../outputs/models/grid_risk_west yorkshire.csv  (4,940 grids)
+  Accuracy:    0.6927
+  Conf tiers:  {'medium': 3611, 'uncertain': 1329}
+[NYC] 3,501 grids loaded
+[NYC] Map saved: ../outputs/maps/map_nyc.html
+  Open in browser to view the interactive map.
+[Chicago] 2,740 grids loaded
+[Chicago] Map saved: ../outputs/maps/map_chicago.html
+  Open in browser to view the interactive map.
+
+Done! Open outputs/maps/map_nyc.html in your browser.
+Spatial only                         n= 4  P=0.3973  F1=0.3829
+Spatial + Temporal                   n=13  P=0.3936  F1=0.3710
+Spatial + Temporal + Relative        n=17  P=0.4484  F1=0.4377
+hist_* only                          n= 3  P=0.5092  F1=0.5071
+lag_* only                           n= 3  P=0.4217  F1=0.4210
+hist_* + lag_*                       n= 6  P=0.5028  F1=0.5005
+Stability features                   n= 3  P=0.3808  F1=0.3710
+All features (full model)            n=26  P=0.4990  F1=0.5001
+
+===== Feature Ablation Study [West Yorkshire] =====
+                Feature Group  N Features  Precision Macro  Precision Weighted  F1 Macro
+                  hist_* only           3           0.5092              0.6623    0.5071
+               hist_* + lag_*           6           0.5028              0.6585    0.5005
+    All features (full model)          26           0.4990              0.6566    0.5001
+Spatial + Temporal + Relative          17           0.4484              0.6457    0.4377
+                   lag_* only           3           0.4217              0.6001    0.4210
+                 Spatial only           4           0.3973              0.5869    0.3829
+           Spatial + Temporal          13           0.3936              0.5876    0.3710
+           Stability features           3           0.3808              0.5723    0.3710
+Saved ablation_west yorkshire.png
+NYC reloaded: train=3,561 val=3,477 test=3,501
+Classes: ['other' 'property' 'violent']
+Spatial only                         n= 4  P=0.4604  F1=0.4354
+Spatial + Temporal                   n=13  P=0.4464  F1=0.4459
+Relative features only               n= 4  P=0.5504  F1=0.5656
+hist_* only                          n= 3  P=0.6164  F1=0.5912
+lag_* only                           n= 3  P=0.4580  F1=0.4160
+hist_* + lag_*                       n= 6  P=0.6088  F1=0.5923
+Stability features                   n= 3  P=0.4702  F1=0.4664
+No hist_* (all except hist)          n=23  P=0.5668  F1=0.5904
+All features                         n=26  P=0.5979  F1=0.5953
+
+===== Feature Ablation [NYC] =====
+              Feature Group  N Features  Precision Macro  Precision Weighted  F1 Macro
+                hist_* only           3           0.6164              0.7111    0.5912
+             hist_* + lag_*           6           0.6088              0.7145    0.5923
+               All features          26           0.5979              0.7129    0.5953
+No hist_* (all except hist)          23           0.5668              0.6886    0.5904
+     Relative features only           4           0.5504              0.6624    0.5656
+         Stability features           3           0.4702              0.6521    0.4664
+               Spatial only           4           0.4604              0.6435    0.4354
+                 lag_* only           3           0.4580              0.6442    0.4160
+         Spatial + Temporal          13           0.4464              0.5848    0.4459
+Saved ablation_nyc.png
+Chicago reloaded: train=2,838 val=2,723 test=2,740
+Classes: ['other' 'property' 'violent']
+Spatial only                         n= 4  P=0.4177  F1=0.4175
+Spatial + Temporal                   n=13  P=0.3907  F1=0.3499
+Relative features only               n= 4  P=0.4787  F1=0.4785
+hist_* only                          n= 3  P=0.4737  F1=0.4705
+lag_* only                           n= 3  P=0.4239  F1=0.4154
+hist_* + lag_*                       n= 6  P=0.4968  F1=0.5030
+Stability features                   n= 3  P=0.4328  F1=0.4119
+No hist_* (all except hist)          n=23  P=0.4692  F1=0.4657
+All features                         n=26  P=0.4891  F1=0.4883
+
+===== Feature Ablation [Chicago] =====
+              Feature Group  N Features  Precision Macro  Precision Weighted  F1 Macro
+             hist_* + lag_*           6           0.4968              0.8044    0.5030
+               All features          26           0.4891              0.8070    0.4883
+     Relative features only           4           0.4787              0.8070    0.4785
+                hist_* only           3           0.4737              0.8066    0.4705
+No hist_* (all except hist)          23           0.4692              0.8023    0.4657
+         Stability features           3           0.4328              0.8023    0.4119
+                 lag_* only           3           0.4239              0.7748    0.4154
+               Spatial only           4           0.4177              0.7619    0.4175
+         Spatial + Temporal          13           0.3907              0.7522    0.3499
+Saved ablation_chicago.png
+Traceback (most recent call last):
+  File "/home/itriu100/spatiotemporal-crime-transfer-learning-main/notebook/crime_classification_full_WestYorkshire.py", line 2331, in <module>
+    get_ipython().run_line_magic('pip', 'install shap')
+NameError: name 'get_ipython' is not defined
