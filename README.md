@@ -23,6 +23,8 @@
   **ZH** 警報 log 與 REST API
 - **EN** ESP32-CAM HTTP capture support
   **ZH** ESP32-CAM HTTP capture 支援
+- **EN** Automatic LED control — LED turns on when loitering is detected, off when the area is clear
+  **ZH** 自動 LED 控制 — 偵測到徘徊時亮燈，區域淨空後熄燈
 
 ---
 
@@ -42,6 +44,9 @@ ESP32-CAM (HTTP /capture)  ──or / 或──  Local file / webcam（本地影
          ↓
   Dashboard display  +  REST API  +  in-memory alert log
   （儀表板顯示 + REST API + 記憶體警報 log）
+         ↓
+  ESP32 LED on/off via HTTP /led?state=on|off
+  （透過 HTTP 控制 ESP32 LED 亮滅）
 ```
 
 ---
@@ -174,6 +179,7 @@ python loitering_dashboard/app.py
 | Parameter / 參數 | File / 檔案 | Default / 預設值 |
 |---|---|---|
 | ESP32-CAM IP | `loitering_dashboard/app.py` | `172.20.10.2` |
+| LED endpoint / LED 端點 | `loitering_dashboard/app.py` | `http://<ESP32_IP>/led` |
 | Loiter threshold (dashboard) / 徘徊門檻（儀表板） | `loitering_dashboard/app.py` | `5.0` 秒 |
 | Loiter threshold (CLI) / 徘徊門檻（CLI） | `loitering_detect.py` via `--loiter-seconds` | `10.0` 秒 |
 | ROI polygon points / ROI 頂點座標 | Both / 兩者 | Full frame `(0,0)→(1280,960)` |
@@ -209,9 +215,13 @@ ROI_POINTS = [
 3. 燒錄至 ESP32-CAM 開發板。
 4. 記錄分配到的 IP，並更新 `loitering_dashboard/app.py` 中的 `ESP32_IP`。
 
-**EN** — The system polls `http://<ESP32_IP>/capture` to fetch JPEG frames.
+**EN** — The system polls `http://<ESP32_IP>/capture` to fetch JPEG frames, and controls the onboard LED via `http://<ESP32_IP>/led?state=on` / `?state=off`.
 
-**ZH** — 系統以輪詢方式從 `http://<ESP32_IP>/capture` 抓取 JPEG 影像幀。
+**ZH** — 系統以輪詢方式從 `http://<ESP32_IP>/capture` 抓取 JPEG 影像幀，並透過 `http://<ESP32_IP>/led?state=on` / `?state=off` 控制板載 LED。
+
+**EN** — Make sure your ESP32-CAM firmware exposes both `/capture` and `/led` endpoints.
+
+**ZH** — 請確認 ESP32-CAM 韌體同時提供 `/capture` 與 `/led` 兩個端點。
 
 ---
 
