@@ -60,6 +60,7 @@ bash run.sh
 - 熱力圖疊加（含時間衰減）
 - 警報 log + REST API
 - ESP32-CAM HTTP capture 支援
+- 自動 LED 控制：偵測到徘徊時亮燈，區域淨空後熄燈（`/led?state=on|off`）
 
 **系統架構：**
 ```
@@ -70,6 +71,8 @@ ESP32-CAM (HTTP)  ──或──  影片檔 / Webcam
    ROI 判斷 + 停留時間累計
         ↓
    Flask 儀表板 + REST API + 警報 log
+        ↓
+   ESP32 LED on/off（HTTP /led?state=on|off）
 ```
 
 ---
