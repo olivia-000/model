@@ -1,0 +1,8 @@
+checkpoints/
+results/
+results_fullres/
+datasets/
+__pycache__/
+*.pyc
+*.pth
+*.pkl
