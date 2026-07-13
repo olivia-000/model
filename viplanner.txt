@@ -1,0 +1,140 @@
+viplanner
+
+carla open (base) itriu100@itriu100-MS-7E47:~/carla/simulator/CARLA_0.9.16$ ./CarlaUE4.sh
+
+
+(viplanner) itriu100@itriu100-MS-7E47:~/viplanner$ python carla_capture_test_pair.py \
+    --output_dir ./test_scene2_obstacle \
+    --spawn_index 20 \
+    --camera_height 0.5 \
+    --pitch_deg 0 \
+    --spawn_obstacle \
+    --obstacle_distance 5.0 \
+    --obstacle_lateral_offset -1.5
+[參考位置] 虛擬機器人位置: Location(x=48.546078, y=140.975540, z=0.600001), 朝向: Rotation(pitch=0.000000, yaw=0.320448, roll=0.000000)
+[障礙物] 已在正前方 5.0m 生成車輛，等待落到路面穩定...
+[除錯] 障礙物最終位置: Location(x=53.537945, y=142.503296, z=-0.006655)
+[除錯] 障礙物相對機器人參考點: 前方 5.00m, 右方 1.50m
+[相機] 世界座標: Vector3D(x=48.846073, y=140.977219, z=1.100001), 俯仰角: 0.0度
+[等待] 讓場景穩定並收集第一幀影像...
+[完成] 輸出存到 ./test_scene2_obstacle/
+  depth.npy         (深度，公尺，shape=(360, 640))
+  sem_viplanner.png (ViPlanner 配色語義圖)
+  rgb_debug.png     (原始 RGB，方便核對場景)
+(viplanner) itriu100@itriu100-MS-7E47:~/viplanner$ python infer_single.py \
+    --model_dir /home/itriu100/viplanner/viplanner_models \
+    --depth ./test_scene2_obstacle/depth.npy \
+    --semantic ./test_scene2_obstacle/sem_viplanner.png \
+    --goal 13.0 0.0 0.0 \
+    --output result_scene2_obstacle.png \
+    --save_traj ./test_scene2_obstacle/traj_scene2.npy
+[Warning] Pre-trained ResNet50 models cannot be used since detectron2 not found
+[Warning] Pre-trained ResNet50 models cannot be used since mask2former not found
+/home/itriu100/miniconda3/envs/viplanner/lib/python3.10/site-packages/wandb/apis/public.py:3109: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+[模型資訊] sem=True, rgb=False, knodes=5, in_channel=16, img_input_size=[360, 640]
+[關鍵點] shape=torch.Size([1, 5, 3])
+[軌跡]   shape=torch.Size([1, 51, 3])
+/home/itriu100/viplanner/infer_single.py:189: UserWarning: Glyph 9989 (\N{WHITE HEAVY CHECK MARK}) missing from font(s) WenQuanYi Zen Hei.
+  plt.tight_layout()
+/home/itriu100/viplanner/infer_single.py:190: UserWarning: Glyph 9989 (\N{WHITE HEAVY CHECK MARK}) missing from font(s) WenQuanYi Zen Hei.
+  plt.savefig(output_path, dpi=150)
+[輸出] 軌跡視覺化已存到: result_scene2_obstacle.png
+[結果] fear = 0.2870  路徑安全
+[輸出] 軌跡原始座標已存到: ./test_scene2_obstacle/traj_scene2.npy (shape=torch.Size([51, 3]), 座標系: x前方/y左方/z上方)
+
+ViPlanner 輸入格式完整分析
+
+  根據原始碼（viplanner/utils/dataset.py、viplanner/config/learning_cfg.py、viplanner/config/viplanner_sem_meta.
+  py、viplanner_algo.py、TRAINING.md）整理如下。
+
+Route A 完整攻略：mmdetection + Mask2Former 全景分割
+
+  0. 先講一個架構上的關鍵決定：獨立開一個新 conda env
+
+  不要把 mmdetection 裝進你現有的 viplanner 或 carla_env。理由：
+
+  - 你這兩個 env 裡的 torch 是 2.11.0+cu128 / 2.12.0+cu128，非常新。mmcv（mmdetection 的底層依賴）的官方預編譯
+  wheel 通常會落後新版 torch/CUDA 好幾個月才更新，硬塞進去很可能觸發「找不到對應 wheel，mim install mmcv
+  改成從原始碼編譯」——這需要你本機的 CUDA toolkit（nvcc）版本跟 torch
+  編譯時用的完全對上，是最常見的地雷，編譯還可能耗時十幾分鐘以上。
+  - 全景分割在你的 pipeline 裡只是產生一張 PNG 的前處理步驟，跟 ViPlanner 本身的 PyTorch
+  推論是完全解耦的兩個獨立行程（一個吃 RGB 吐 PNG，一個吃 PNG+depth
+  吐軌跡），中間用檔案系統當介面，本來就不需要活在同一個 Python 環境裡。
+
+  所以做法是：另開一個乾淨 env（例如 mask2former_env），torch 版本挑 mmcv 官方相容矩陣裡明確支援的版本（通常是
+  torch 2.1~2.4 這個區間，cu118/cu121 系列），跑完產生語義圖之後，切回 viplanner env 跑 infer_single.py。
+ 
+ 1. 要裝的套件
+
+  OpenMMLab 生態的標準三件套，用 mim（不要單純 pip install mmdet，容易兜不起版本）：
+
+  conda create -n mask2former_env python=3.10
+  conda activate mask2former_env
+  pip install torch torchvision --index-url <對應mmcv支援的cuda版本>
+  pip install -U openmim
+  mim install mmengine
+  mim install "mmcv>=2.0.0"
+  mim install mmdet
+ 2. Config + Checkpoint 怎麼拿
+
+  你 m2f_inference.py 裡預設寫的路徑：
+  config_file="configs/coco/panoptic-segmentation/maskformer2_R50_bs16_50ep.yaml"
+  checkpoint_file="model_final.pth"
+  這個命名格式其實比較像原版 Mask2Former repo（facebookresearch/Mask2Former，給 detectron2 用）的路徑慣例，不是
+  mmdetection 自己的 config 命名慣例（mmdet 3.x 通常長得像 mask2former_r50_8xb2-lsj-50e_coco-panoptic.py）。這代
+  表這個預設值很可能只是範例/佔位字串，不能直接照抄用，要實際去 mmdetection 官方確認 Mask2Former panoptic
+  版本的正確 config 名稱。
+
+  好消息是不用自己找下載連結，mim 有內建指令會自動抓 config + 對應 checkpoint：
+
+  mim download mmdet --config mask2former_r50_8xb2-lsj-50e_coco-panoptic --dest ./m2f_ckpt
+
+  （實際 config 名稱我會在動手前先用 mim search mmdet --config "*mask2former*panoptic*" 或查 mmdetection repo 的
+  configs/mask2former/metafile.yml 核對一次，不會用猜的直接下載，避免抓錯模型。）checkpoint 大小大約落在
+  200~300MB 之間。
+
+  m2f_inference.py 裡 from mmdet.evaluation import INSTANCE_OFFSET 這個子模組路徑是 mmdet 3.x 才有（2.x 版沒有
+  mmdet.evaluation），所以要確定裝到的是 mmdet 3.x，不是舊版。
+
+ 3. 把 m2f_inference.py 改成 standalone 腳本
+
+  沿用你自己「把 viplanner_algo.py 去 ROS/Isaac 化寫成 infer_single.py」的模式，這次是把 m2f_inference.py 去 ROS 化：
+
+  - 拿掉 import rospy 和 rospy.logwarn(...)（換成 print）
+  - 核心邏輯完全照抄，不用重寫：
+    a. init_detector(config, checkpoint) 載入模型
+    b. inference_detector(model, image_bgr) 推論
+    c. result.pred_panoptic_seg.sem_seg 取出 (H,W) 的編碼圖，每個像素 = category_id*INSTANCE_OFFSET + instance_id
+    d. % INSTANCE_OFFSET 解碼出 COCO 133 類的 category_id
+    e. get_class_for_id_mmdet(model.dataset_meta["classes"])（coco_sem_meta.py 裡現成的函式）把 COCO 類別對到 ViPlanner
+  34 類
+    f. VIPlannerSemMetaHandler().class_color[...] 上色，輸出跟你現在 sem_viplanner.png 完全同格式的 3 通道 RGB PNG
+  - 加 CLI 介面：吃一張 RGB 圖路徑，吐一張語義 PNG，可以直接接 infer_single.py --semantic
+ 4. 完整資料流
+
+  RGB照片 (真實相機拍的 或 CARLA carla_capture_test_pair.py 存的 rgb_debug.png)
+    │
+    ▼  [在 mask2former_env 裡跑]
+  panoptic_inference.py
+    → init_detector + inference_detector
+    → pred_panoptic_seg.sem_seg → %INSTANCE_OFFSET 拿category_id
+    → get_class_for_id_mmdet + VIPlannerSemMetaHandler 上色
+    → 輸出 sem_predicted.png (34類色碼PNG，格式=你現有的sem_viplanner.png)  5. 對應你「兩者都要」的用途
+
+  - 真實照片場景：沒有 ground truth 可比，panoptic_inference.py 產出的語義圖就是唯一輸入，只能靠實地測試/肉眼檢查合理性。
+  - CARLA 驗證場景：同一個 CARLA 畫面你會同時有兩張語義圖——carla_capture_test_pair.py 產的 sem_viplanner.png（ground
+  truth）跟 panoptic_inference.py 產的
+  sem_predicted.png（模型猜的）。可以再寫一個小工具逐像素比對兩張色碼圖的類別一致率，量化「用真實分割模型取代 ground
+  truth」會讓 ViPlanner 的軌跡/fear 值飄移多少——這個誤差就是你以後接真實機器人時必然會遇到的雜訊來源，先在 CARLA
+  裡量出來很有參考價值。
+
+
+    │
+    ▼  [切回 viplanner env 跑]
+  infer_single.py --depth depth.npy --semantic sem_predicted.png --goal x y z
+
+  兩個 env 之間單純用檔案交接，也可以寫一支小 shell script 用 conda run -n mask2former_env python panoptic_inference.py 
+  ... 接 conda run -n viplanner python infer_single.py ... 串起來自動化，不用手動切換。
+
+

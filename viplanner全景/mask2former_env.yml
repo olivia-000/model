@@ -1,0 +1,43 @@
+# mask2former_env —— 全景分割專用環境（mmdetection 3.x + Mask2Former）
+#
+# 建立: conda env create -f mask2former_env.yml
+#
+# 版本選擇原理（詳見 README.md 第 0.4 / 1.1 節）：
+#   - torch 刻意「不」用主環境的 2.11+cu128，而是 2.1.2+cu121——mmcv 的官方預編譯
+#     wheel 落後新版 torch 好幾個月，torch 太新會觸發 mmcv 從原始碼編譯（最常見地雷）。
+#   - mmcv 2.1.0 + mmdet 3.3.0 + torch 2.1.x 是官方相容矩陣內的已知可用組合，
+#     且 mmdet 3.x 才有 `mmdet.evaluation.INSTANCE_OFFSET`（2.x 沒有，程式會直接掛）。
+#   - mmcv 的 -f find-links 指向 openmmlab 的 cu121/torch2.1 預編譯 wheel index，
+#     確保抓到二進位 wheel 而不是原始碼。
+#   - numpy 鎖 <2：mmcv 2.1 早於 numpy 2.0，混用會出現隱性 ABI 問題。
+#   - rospkg/catkin-pkg 是給機器狗部署的 dog/sem_seg_node.py 用的
+#     （rospy 本體來自 source /opt/ros/noetic/setup.bash，不用 pip 裝）。
+#
+# 建好後驗證:
+#   conda activate mask2former_env
+#   python -c "import mmdet; from mmdet.evaluation import INSTANCE_OFFSET; print(mmdet.__version__, INSTANCE_OFFSET)"
+#
+# 下載模型權重（一次性）:
+#   mim download mmdet --config mask2former_r50_8xb2-lsj-50e_coco-panoptic --dest ./m2f_ckpt
+name: mask2former_env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.1/index.html
+      - numpy<2
+      - torch==2.1.2+cu121
+      - torchvision==0.16.2+cu121
+      - openmim
+      - mmengine
+      - mmcv==2.1.0
+      - mmdet==3.3.0
+      - opencv-python
+      - matplotlib
+      # 機器狗 ROS 節點用（離線 pipeline 不需要，留著無害）
+      - rospkg
+      - catkin-pkg
+      - pyyaml

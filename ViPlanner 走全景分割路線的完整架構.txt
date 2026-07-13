@@ -1,0 +1,129 @@
+ViPlanner 走全景分割路線的完整架構、輸入輸出與格式
+
+  RGB照片 (真實相機 或 CARLA rgb_debug.png)
+          │
+          ▼  [階段1：全景分割模型，mmdetection + Mask2Former]
+     init_detector() + inference_detector()
+          │
+          ▼  result.pred_panoptic_seg.sem_seg  (H,W) uint/int 編碼圖
+          │
+          ▼  [階段2：COCO panoptic → ViPlanner 34類 映射]
+     category_id = pixel % INSTANCE_OFFSET
+     get_class_for_id_mmdet() 查表 → viplanner類名 → VIPlannerSemMetaHandler 上色
+          │
+          ▼  sem_predicted.png (3通道 RGB PNG，34類色碼)
+          │
+          ├──────────────┐
+          ▼              ▼
+     [語義輸入]      [深度輸入] depth.npy (公尺, float32)
+          │              │
+          ▼              ▼
+     [階段3：DualAutoEncoder 網路推論]
+          │
+          ▼
+     keypoints (N,k,3) + fear (N,1)
+          │
+          ▼                        
+     TrajOpt.TrajGeneratorFromPFreeRot() → 密集軌跡點
+
+  ---
+  階段1：全景分割 (Mask2Former, mmdetection)
+
+  程式位置：ros/planner/src/m2f_inference.py
+
+  - 輸入：image: np.ndarray，BGR格式（OpenCV慣例），任意解析度的RGB相機影像。
+  - 模型：init_detector(config_file, checkpoint_file, device="cuda:0")，config是COCO panoptic訓練的Mask2Former（ResNet50
+  backbone）。
+  - 推論：inference_detector(model, image) 回傳一個結果物件。
+  - 原始輸出格式：
+  result.pred_panoptic_seg.sem_seg  # shape (1, H, W)，取 [0] 變成 (H, W)
+  - 每個像素值 = category_id * INSTANCE_OFFSET + instance_id（mmdet標準全景編碼，INSTANCE_OFFSET通常是1000）。
+    - 這是全景分割（不是純語義分割）的原因：同一類別的不同物件實例會有不同的 instance_id，但像素值本身混合了兩種資訊。
+    - ViPlanner 完全不用instance_id，只取語義類別：curr_label = curr_sem_class % INSTANCE_OFFSET。
+    - 若 category_id == 類別總數（COCO panoptic的"void/unlabeled"），視為無效，回退成ViPlanner的"static"類。
+
+  階段2：類別映射 (COCO 133類 → ViPlanner 34類)
+
+  程式位置：viplanner/config/coco_sem_meta.py
+
+  - COCO panoptic分類系統：133類，COCO_CATEGORIES列表，isthing=1是80個前景物件類（person、car…），isthing=0是53個背景區域類
+  （sky-other-merged、pavement-merged…）。
+  - _COCO_MAPPING：手刻的多對一關鍵字映射表，把133類的名稱關鍵字對到ViPlanner的34類名稱之一（例如 car/bus/truck/boat → 
+  "vehicle"）。
+  - get_class_for_id_mmdet(class_list)：拿模型的 model.dataset_meta["classes"]（順序即索引0~132）逐一比對
+  _COCO_MAPPING，建出 coco_index -> viplanner_class_name
+  字典。這個索引順序必須跟你載入的模型一致，不同checkpoint/不同mmdet版本的類別順序若不同，這張表就要重建。
+  - 最後 VIPlannerSemMetaHandler().class_color[viplanner_class_name] 查到RGB色碼。
+
+  輸出格式：
+  panoptic_mask = np.zeros((H, W, 3), dtype=np.uint8)
+  panoptic_mask[result == curr_sem_class] = viplanner_rgb_color  # 逐類別上色
+  一張 (H, W, 3) uint8 RGB圖，色碼精確對應 viplanner_sem_meta.py::VIPLANNER_SEM_META
+  的34類定義。這一步的輸出，就是網路真正吃的「語義輸入圖」，跟你CARLA ground truth流程 (sem_viplanner.png)
+  是同一種格式，可以互換。
+
+  階段3：深度圖（跟全景分割無關，路線一致）
+
+  - 格式：.npy（float32，公尺）優先，或 .png（uint16，除以 depth_scale，預設1000.0即毫米）。
+  - 前處理（viplanner_algo.py::input_transformer / dataset.py::_load_depth_img 一致邏輯）：
+    a. 非有限值(NaN/Inf)設0
+    b. 除以depth_scale轉公尺
+    c. resize到 img_input_size（model.yaml裡的TrainCfg.img_input_size，預設[360,640]）
+    d. 超過max_depth（預設15m）的像素設0
+    e. 不做min-max正規化，直接用公尺數值
+ 階段4：網路輸入 tensor 格式
+
+  ┌─────────┬────────────────────────────────┬──────────┬─────────────────────────────────────────────────────────────┐
+  │  輸入   │            產生方式              │ tensor   │                           正規化                             │
+  │         │                                │  shape   │                                                             │
+  ├─────────┼────────────────────────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+  │ depth   │ 上面階段3                       │ (1,1,H,W │ 無（保留公尺原始值），送進encoder前expand成3通道                 │
+  │         │                                │ )        │                                                             │
+  ├─────────┼────────────────────────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+  │ semanti │ 階段1+2的panoptic_mask          │ (1,3,H,W │ resize後除以255.0                                            │
+  │ c       │                                │ )        │                                                             │
+  ├─────────┼────────────────────────────────┼──────────┼─────────────────────────────────────────────────────────────┤
+  │ goal    │ 使用者/上游定義相對相機的目標      │ (1,3)    │ 只取(x,y,z)公尺，camera座標系(x前方y左方z上方)，z會被強制設       │
+  │         │ 點                             │          │ 0                                                           │
+  └─────────┴────────────────────────────────┴──────────┴─────────────────────────────────────────────────────────────┘
+
+  階段5：DualAutoEncoder 網路架構
+
+  程式位置：viplanner/plannernet/autoencoder.py、PlannerNet.py、rgb_encoder.py
+
+  depth (1,1,H,W)
+     → expand成3通道
+     → encoder_depth = PlannerNet(ResNet18-like, layers=[2,2,2,2])
+     → depth特徵圖 (N, 512, h, w)
+
+  semantic (1,3,H,W)  ← 全景分割產生的色碼圖
+     → encoder_sem：
+         - 若 rgb=False (走語義色碼路線，跟你現在CARLA流程一致)：也是PlannerNet(ResNet18-like)
+         - 若 rgb=True 且 pre_train_sem=True：換成RGBEncoder，凍結的Mask2Former ResNet50
+  backbone(res5輸出2048通道，再conv降到512通道)
+     → 語義/RGB特徵圖 (N, 512, h, w)
+
+  depth特徵 + 語義特徵 → concat沿channel維 → (N, 1024, h, w)
+  goal(x,y,z) → 線性層編碼成 goal_channels，broadcast到空間維度，concat進去
+     → Decoder (conv1→conv2→flatten→fc1→fc2→fc3) → keypoints (N, knodes, 3)
+                                          └→ frc1→frc2→sigmoid → fear (N, 1)
+
+  重要區分（容易搞混的兩套Mask2Former）：
+  - 階段1的全景分割：用mmdetection跑完整推論，產生語義輸入圖，這是你現在要建的 mask2former_env 要做的事。
+  - rgb_encoder.py的RGBEncoder：只在rgb=True模式下，用detectron2版Mask2Former的backbone權重當特徵提取器（凍結，不做分割推論
+  ），跟階段1完全是兩碼事，也不會用到你新建的mmdet環境。除非你訓練/使用的是rgb=True的模型，否則走全景分割只影響「怎麼產生語
+  義輸入圖」這一步，網路本身（sem=True模式）架構完全不變，跟你原本用CARLA ground truth時吃的網路是同一顆。
+
+  階段6：輸出格式
+
+  - keypoints：(N, knodes, 3)，knodes預設5，機器人座標系下的路徑關鍵點(公尺)。
+  - fear：(N, 1)，sigmoid輸出的0~1碰撞風險分數，>fear_threshold(預設0.5)視為高風險路徑。
+  - TrajOpt.TrajGeneratorFromPFreeRot(keypoints, 
+  step=0.1)：把稀疏keypoints內插成密集軌跡點，這是infer_single.py裡最後拿去畫圖/存檔的traj。
+
+  ---
+  一句話總結：走全景分割只是替換掉「怎麼產生sem_viplanner.png」這一步的方法（用Mask2Former猜，取代CARLA ground
+  truth或你手刻的Cityscapes
+  LUT），下游的深度處理、網路架構、輸出格式完全不變，都是套用你已經在用的infer_single.py/viplanner_sem_meta.py那一套。
+
+
