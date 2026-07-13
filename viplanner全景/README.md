@@ -393,7 +393,35 @@ rostopic pub -1 /viplanner/goal geometry_msgs/PointStamped \
 
 ---
 
-## 第 4 部分：常見地雷 checklist
+## 第 4 部分：GitHub 備份（olivia-000/model 的 viplanner 分支）
+
+整個 `/home/itriu100/viplanner` 資料夾（含模型、測試資料、本資料夾）備份在
+**https://github.com/olivia-000/model 的 `viplanner` 分支**（2026-07-13 推送）。
+要還原/搬機時注意以下幾點：
+
+- **它是「孤兒分支」**：內容是整個資料夾的完整快照（258 個檔案），跟 main 或其他分支
+  （pix2pixHD 等）沒有共同歷史，不要嘗試 merge。
+- **`model.pt`（271MB）走 Git LFS**：超過 GitHub 單檔 100MB 硬限制，所以該分支用 LFS
+  追蹤 `*.pt`。**clone 前必須先裝 git-lfs**（`sudo apt install git-lfs && git lfs install`），
+  否則拉下來的 `model.pt` 只是幾百 byte 的 pointer 文字檔，載入模型會直接炸。
+  驗證方式：`ls -lh viplanner_models/model.pt` 應為 272M 左右。
+
+  ```bash
+  sudo apt install git-lfs && git lfs install
+  git clone -b viplanner https://github.com/olivia-000/model.git viplanner
+  ```
+- **`.gitignore` 的坑**：上游 ViPlanner 的 `.gitignore` 會擋掉 `*.pt` 和 `*.png`。
+  備份時 `model.pt` 和所有測試場景的 `sem_viplanner.png`／`rgb_debug.png`（共 38 個檔案）
+  是**強制加入**（`git add -f`）的。之後若要更新分支上的模型或測試圖，記得同樣用
+  `git add -f`，不然會默默漏掉。
+- **有排除的東西**：`__pycache__`、`*.egg-info`、原本的 `.git` 歷史（純產物，重建即可）。
+  其餘照原樣，包括本資料夾、所有 `test_*` 資料夾、`CLAUDE.md`、`ARCHITECTURE.md`。
+- **repo 是公開的**：模型權重和測試資料任何人都能下載。若之後不想公開，把 repo 轉私有
+  或刪掉此分支。
+
+---
+
+## 第 5 部分：常見地雷 checklist
 
 - [ ] mmdet 必須 3.x（`from mmdet.evaluation import INSTANCE_OFFSET` 能過）。
 - [ ] 換 Mask2Former checkpoint 後：跑一張圖開 `--overlay` 肉眼驗證映射
