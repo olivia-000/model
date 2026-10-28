@@ -594,3 +594,16 @@ py-spy（pip download 的 wheel 拆出 binary，`docker cp` 進去）要用 `doc
 `isaacsim.exp.full.kit` 設 `exts."isaacsim.core.throttling".enable_async = true`：啟動時開非同步渲染，PLAY 時關、STOP 後再開。
 修法（`viplanner_control.run_walk`，play 之前）：`enable_async=False`、`/app/asyncRendering=False`、`asyncRenderingLowLatency=False`，再跑 2 次 app update。
 PLAY 事件因此不再切換。為什麼只有 growin + 方塊場景會中，未查明（推測與渲染時序有關）。
+
+## 2026-10-28 — 備份/版本控制；aabbs 在實機的替代方向討論
+- **備份方式**：專案 104 GB，其中 103 GB 是 `training_data/*/depth`（收集的深度圖）。用戶選「程式碼＋模型」→
+  `~/Desktop/viplanner2_backups/viplanner2_2026-10-28.tar.gz`（3.3 GB）。同時 `git init`，commit `495db46` + tag `v2026-10-28`，
+  `.gitignore` 排除 training_data 大型資料夾、模型權重、USD 場景、mesh、壓縮檔。
+- **aabbs 的兩種用途**：A. 產生 ViPlanner 語意圖（`viplanner_control.py:1878`）——已有 GEO_V2 / Mask2Former 替代，SAM3 也可候選；
+  B. 控制迴圈導引/防撞/樓梯分群/是否在樓梯上（`:997`、`:1073`、`:1219`、`:2010` 等）——需要世界座標 3D 資訊，2D 遮罩模型單獨無法取代。
+- **用戶目標**：狗靠「視覺語意」自主導航。討論結論（待用戶確認）：
+  - `geometric_semantic_v2` 的語意來自深度，嚴格說不算視覺語意；語意應來自 RGB（SAM3/M2F），深度只提供距離——RGB-D 仍屬視覺語意導航，且 ViPlanner 本身就吃深度。
+  - 控制迴圈裡的場景專屬規則（Stair A 中線、封鎖、挑下一階）與「網路自主決策」的目標相衝突；方向是逐步拿掉，改靠：
+    ① cost map 把空洞/落差標高 cost（`build_costmap.py`），② 語意加邊緣/欄杆，③ HIMLoco 處理腳下，④ 保留通用安全層（落差偵測），
+    ⑤ 長期可考慮自監督可通行性（如 Wild Visual Navigation）。
+  - 窄牆：TrajCost 已用 `robot_width`（go2 0.28 / leo 0.54）算路徑 cost，網路能學，但前提是訓練資料有窄通道且相機看得到。

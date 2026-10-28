@@ -112,6 +112,12 @@
 - `機器狗紀錄viplanner` → `機器狗紀錄viplanner.docx`（44 頁，含新章「關於腳步里程」），舊版留 `.docx.bak`。
   轉檔腳本在 session scratchpad `txt2docx.py`（python-docx；圖用 Noto CJK 畫成 PNG，► ◄ 字型沒有→改畫 ▶ ◀）。
 
+### 2026-10-28 — 備份 + 版本控制；討論往純視覺語意導航的方向
+- **備份**：`~/Desktop/viplanner2_backups/viplanner2_2026-10-28.tar.gz`（3.3 GB；含程式碼、notes、models、cost map、aabbs.json、cloud.ply；
+  排除 `training_data/*/depth`、`*/semantics`、`percep_debug_down`）。
+- **git init**：commit `495db46`、tag `v2026-10-28`（只收程式碼/設定/notes，大檔見 `.gitignore`）。之後改動可用 `git diff v2026-10-28`。
+- 方向討論（細節在 history.md 10-28）：aabbs 是模擬真值、實機不可用；用戶希望靠視覺語意自主導航，傾向減少場景專屬手寫規則。
+
 ## 活躍問題
 | 問題 | 狀態 |
 |---|---|
@@ -132,3 +138,5 @@
 - **growin 過夜測試（10-13~14，GUIDANCE=full、v3，204 趟）**：180 到 3F（88%，步數中位 3544）、19 趟卡到 26000 步上限、5 趟跌倒。卡住原因未查。
 - growin 相機範圍（xacro 0.52~6.0 m）是否套用，待用戶決定。
 - 深度語意加 RealSense 類雜訊評估；階段 3（局部高度圖取代 aabbs 導引）
+- **（10-28 提出）** 檢查 `build_costmap.py` 是否把樓梯井空洞/平台邊緣標成高 cost（讓 ViPlanner 自己學避開落差）；
+  評估 SAM3 vs Mask2Former 當語意來源（準確率用 aabbs 語意圖當標準答案，延遲在目標硬體量）。待用戶確認：可否接受 RGB-D、可否拿掉場景專屬導引規則。
