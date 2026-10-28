@@ -1,0 +1,183 @@
+# Copyright (c) 2023-2024, ETH Zurich (Robotics Systems Lab)
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# U-shaped (switchback) staircase for the custom "multi_floor" scene: two 10-step flights (each
+# 0.15m riser x 0.30m tread, matching the low-level policy's trained/critical-zone stair range,
+# see go2_stairs_train_cfg.py) connected by a landing, leading up to a 2F room floor. Every entry
+# here (steps, landing, 2F floor) is a solid block spanning z=0 (the actual floor) up to its own
+# tread height -- same "no gaps a foot could catch on" convention warehouse_official/ramp_cfg.yml
+# uses -- so the height-scan-aware policy always finds continuous ground under it, never a cliff
+# edge between adjacent steps or a hole between the last step and the room floor above it.
+# Positions/sizes are computed directly from multi_floor_scene.py's own geometry constants
+# (STEP_HEIGHT=0.15, STEP_DEPTH=0.30, STAIR_WIDTH=1.50, STEPS_PER_FLIGHT=10, first_start_x=-4.0,
+# first_y=-1.20, second_y=1.20, HALF_HEIGHT=1.50, LANDING_LENGTH=1.50, LANDING_WIDTH=4.20,
+# SECOND_FLOOR_LENGTH=7.0, SECOND_FLOOR_WIDTH=10.0, second_floor_center_x=-7.5) -- keep in sync if
+# that script's layout ever changes. yaw_deg=0 throughout: incline_deg=0 (flat steps) makes a
+# symmetric box yaw-invariant, and size=[x_extent, y_extent, z_extent] already matches world
+# X/Y directly with no rotation needed.
+
+# --- Flight A: climbs +X, y=-1.20, x from -3.85 to -1.15 ---
+stair_a_00:
+  prim_name: "StairA_00"
+  translation: [-3.85, -1.20, 0.075]
+  size: [0.30, 1.50, 0.15]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_01:
+  prim_name: "StairA_01"
+  translation: [-3.55, -1.20, 0.15]
+  size: [0.30, 1.50, 0.30]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_02:
+  prim_name: "StairA_02"
+  translation: [-3.25, -1.20, 0.225]
+  size: [0.30, 1.50, 0.45]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_03:
+  prim_name: "StairA_03"
+  translation: [-2.95, -1.20, 0.30]
+  size: [0.30, 1.50, 0.60]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_04:
+  prim_name: "StairA_04"
+  translation: [-2.65, -1.20, 0.375]
+  size: [0.30, 1.50, 0.75]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_05:
+  prim_name: "StairA_05"
+  translation: [-2.35, -1.20, 0.45]
+  size: [0.30, 1.50, 0.90]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_06:
+  prim_name: "StairA_06"
+  translation: [-2.05, -1.20, 0.525]
+  size: [0.30, 1.50, 1.05]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_07:
+  prim_name: "StairA_07"
+  translation: [-1.75, -1.20, 0.60]
+  size: [0.30, 1.50, 1.20]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_08:
+  prim_name: "StairA_08"
+  translation: [-1.45, -1.20, 0.675]
+  size: [0.30, 1.50, 1.35]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_a_09:
+  prim_name: "StairA_09"
+  translation: [-1.15, -1.20, 0.75]
+  size: [0.30, 1.50, 1.50]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+
+# --- Landing: x=-1.0 to 0.5 (center -0.25), y=-2.1 to 2.1, top=1.50m ---
+landing:
+  prim_name: "Landing"
+  translation: [-0.25, 0.0, 0.75]
+  size: [1.50, 4.20, 1.50]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+
+# --- Flight B: climbs -X (from the landing back toward Floor_2), y=1.20, x from -1.15 to -3.85 ---
+stair_b_00:
+  prim_name: "StairB_00"
+  translation: [-1.15, 1.20, 0.825]
+  size: [0.30, 1.50, 1.65]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_01:
+  prim_name: "StairB_01"
+  translation: [-1.45, 1.20, 0.90]
+  size: [0.30, 1.50, 1.80]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_02:
+  prim_name: "StairB_02"
+  translation: [-1.75, 1.20, 0.975]
+  size: [0.30, 1.50, 1.95]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_03:
+  prim_name: "StairB_03"
+  translation: [-2.05, 1.20, 1.05]
+  size: [0.30, 1.50, 2.10]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_04:
+  prim_name: "StairB_04"
+  translation: [-2.35, 1.20, 1.125]
+  size: [0.30, 1.50, 2.25]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_05:
+  prim_name: "StairB_05"
+  translation: [-2.65, 1.20, 1.20]
+  size: [0.30, 1.50, 2.40]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_06:
+  prim_name: "StairB_06"
+  translation: [-2.95, 1.20, 1.275]
+  size: [0.30, 1.50, 2.55]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_07:
+  prim_name: "StairB_07"
+  translation: [-3.25, 1.20, 1.35]
+  size: [0.30, 1.50, 2.70]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_08:
+  prim_name: "StairB_08"
+  translation: [-3.55, 1.20, 1.425]
+  size: [0.30, 1.50, 2.85]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+stair_b_09:
+  prim_name: "StairB_09"
+  translation: [-3.85, 1.20, 1.50]
+  size: [0.30, 1.50, 3.00]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+
+# --- 2F room floor: x=-11.0 to -4.0, y=-5.0 to 5.0, top=3.0m -- split into 4 solid blocks
+# instead of one, leaving a 2m-deep x 5m-wide x 2.2m-tall open tunnel (x=-6.0 to -4.0, y=-2.5 to
+# 2.5, z=0 to 2.2) right at the base of the U-shaped staircase (StairA/B both land around
+# x=-4.0/-4.15, y in [-2.01, 2.01]) so the robot can walk straight through underneath the 2F
+# structure instead of it being one sheer solid wall at ground level. The 4 blocks' tops all still
+# reach z=3.0, so the walkable 2F floor surface is exactly as continuous as the single-block
+# version was -- only the ground-level middle section (behind the tunnel) is hollowed out.
+floor_2_back:
+  prim_name: "Floor2_Back"
+  translation: [-8.5, 0.0, 1.5]
+  size: [5.0, 10.0, 3.0]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+floor_2_side_pos_y:
+  prim_name: "Floor2_SidePosY"
+  translation: [-5.0, 3.75, 1.5]
+  size: [2.0, 2.5, 3.0]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+floor_2_side_neg_y:
+  prim_name: "Floor2_SideNegY"
+  translation: [-5.0, -3.75, 1.5]
+  size: [2.0, 2.5, 3.0]
+  incline_deg: 0.0
+  yaw_deg: 0.0
+floor_2_tunnel_lintel:
+  prim_name: "Floor2_TunnelLintel"
+  translation: [-5.0, 0.0, 2.6]
+  size: [2.0, 5.0, 0.8]
+  incline_deg: 0.0
+  yaw_deg: 0.0

@@ -1,0 +1,28 @@
+# Copyright (c) 2023-2024, ETH Zurich (Robotics Systems Lab)
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Semantic class keywords for the custom "multi_floor" scene, matched case-insensitively as
+# substrings against mesh prim names (see UnRealImporter._add_semantics). Covers both the
+# ramp_cfg.yml-generated stair/landing/floor meshes (prim_name like "StairA_00", "Landing",
+# "Floor2") and the FixedCuboid-built static geometry exported to multi_floor.usd (prim names like
+# "Floor_1", "Room_BackWall", "Stair_A_LeftWall_00", "Person_01_Body"). NOTE: FixedCuboid creates
+# parametric Cube prims, not UsdGeom.Mesh -- _add_semantics only labels Mesh-typed prims, so this
+# mapping only actually takes effect on the ramp_cfg-generated (Mesh-based) stair/landing/floor
+# geometry; the exported walls/people stay semantically unlabeled for now (background class).
+
+floor:
+  - Floor_1
+  - Floor2
+  - Stair
+  - Landing
+  - Ramp
+  - groundplane
+
+wall:
+  - Wall
+  - DoorFrame
+
+person:
+  - Person

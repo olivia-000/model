@@ -1,0 +1,1899 @@
+  關於速度命令的傳達
+  切換方式：ROBOT=growin ./run_stair_usd.sh，不加的話預設還是 leo。
+  ---
+
+  第一層:REPLAN_EVERY_N_STEPS = 8(每 8 步重新「問」ViPlanner 一次)
+
+  每 8 步,程式會做一次完整的推論:抓當下的深度圖+語意圖 → 丟進 ViPlanner 網路 →
+  網路輸出一條預測軌跡(traj_cam,就是畫面上那條綠色/橘色的線)和一個 fear
+  值。從這條軌跡上取一個前方的點(LOOKAHEAD_IDX),算出「原始朝向誤差」(new_heading_error = atan2(py, px))。
+
+  這一步的輸出是「原始的、當下瞬間的」判斷,雜訊很大——同一個位置,連續兩次推論可能算出差 100
+  多度的朝向(這是我們之前診斷出來的,ViPlanner 本身的輸出不穩定)。畫面上那條線,就是每 8
+  步刷新一次的這個原始結果,所以線會看起來比較「跳」。
+
+  ---
+
+  第二層:HEADING_SMOOTH_RATE = 0.4(對原始朝向做平滑,同樣是每 8 步做一次)
+
+  不會直接用上面那個雜訊很大的原始值,而是維護一個「平滑後的朝向」(用 cos/sin 的 EMA,避免角度在 ±180°
+  邊界算錯)。每次新的原始朝向算出來,平滑值會往新值移動 40%(rate=0.4),不是整個跳過去。
+
+  意思是:如果原始朝向突然大跳一次,平滑值不會馬上跟上,而是分好幾次(好幾個 8
+  步)慢慢逼近。這樣即使某一次推論結果是雜訊,也不會讓狗突然轉一個大角度。
+
+  ---
+  
+  第三層:COMMAND_HOLD_STEPS = 10(每 10 步才把平滑後的朝向,轉成真正下給機器狗的指令)
+
+  上面兩層算出來的「目前平滑朝向」,不會每一步都拿去更新指令,而是每 10 步才讀一次目前的平滑朝向值,轉成
+  _viplanner_target_wz(轉向角速度)和 _viplanner_target_vx(前進速度),這 10 步之間指令維持不變(hold)。
+
+  串起來看,一個新的路徑判斷要多久才會真的影響狗的動作:
+
+  1. Step 0:場景剛好有變化
+  2. Step 8(最快下一次 replan):算出新的原始朝向,平滑值往新值移動 40%
+  3. Step 10(最近的 COMMAND_HOLD 邊界):把「這時候」的平滑朝向讀進指令——但這時平滑值可能才走了 40% 的路,還沒完全反映新資訊
+  4. Step 16:第二次 replan,平滑值再往新值移動 40%(累積到 1-0.6²=64%)
+  5. Step 20:下一個 COMMAND_HOLD 邊界,這次讀到的平滑值已經比較接近新值了
+
+  所以粗估要「完全跟上」一個新的路徑判斷,大概需要 2~3 個 REPLAN 週期(16~24 步)才會穩定反映在實際指令上,不是單一個 8 步或 10
+  步就到位。這也是你最早看到「路徑線更新了但狗慢很多才動」的完整原因——不只是 hold 的間隔差,平滑本身也會拖時間。
+
+  另外一個重點:牆體排斥、卡住重新對齊這些安全機制,是每一步都在跑的,不受上面三層限制——所以狗在快撞牆或卡住時的反應,不會被這個延遲拖
+  慢,只有「正常跟著 ViPlanner 走」的部分才有這個延遲。
+  
+  
+  關於目標：
+  它會在走樓梯的時候一直朝目標點的直線前進，我需要讓它知道要直線的走樓梯上去，走上小平台後需要轉彎，直到左邊出現第二接樓梯才能再轉 
+  過去，也是直線上第二接樓梯，到第二樓，然後關於這個是修改哪個檔案                                                                 
+● 要改的檔案是 /home/itri/isaac-sim-docker/home/open_scene_stairs.py——目標點清單（waypoints）就是定義在這裡，viplanner_control.py
+  裡那套「循序前往下一個目標點」的邏輯已經支援任意數量的目標點，不用改那支檔案，只要在這裡多加幾個「沿著樓梯中線走」的中繼點就行。
+  
+  
+  
+  關於轉彎
+  狗的身體對角線半徑我們算出來約 0.354m,現在訓練用的擴散半徑(0.125~0.15m)比狗的身體還小很多——這代表原本的 cost map
+  設計時,大概沒有針對 Go2 這個體型去調整過。要讓網路自己學會留出符合身體大小的距離,應該把這兩個 sigma_smooth 調大,對應到約 0.3~0.4m
+  左右(格數約 6~8),然後重新跑一次你之前那套 fine-tuning pipeline(build_cloud.py → build_costmap.py →
+  train_stairs.py)重新產生訓練用的 cost map 和最佳路徑,再微調 checkpoint
+  
+  這很可能跟我們稍早把牆體安全距離改成「身體對角線」有關。算一下:狗的對角線半徑約 0.354m + 緩衝 0.15m = 有效安全距離約
+  0.5m。樓梯走廊淨寬只有 1.5m,兩側各扣掉 0.5m 安全距離,中間真正「完全不會觸發排斥」的安全區只剩約 0.5m
+  寬——幾乎整條走廊、尤其是樓梯口轉彎要對齊入口的那個瞬間,狗的身體中心距離兩側護欄都很容易小於
+  0.5m,牆體排斥機制就會被觸發,跟「往樓梯口轉」的指令互相打架,狗就會表現得像「不敢轉進去」。
+
+  這是用對角線這種「不管朝向都保守」的算法必然的副作用——它在轉彎時確實比較安全(不會像之前用方向性投影那樣算錯),但代價是在窄走廊裡幾
+  乎整條路都覺得「太靠牆」,變得過度保守。
+  
+  半對角線安全邊界的完整運作方式,分幾層說明:
+
+  第一層:這層邊界是做什麼的
+
+  這是獨立於 ViPlanner 自己避障能力的一道保護網。ViPlanner 每 REPLAN_EVERY_N_STEPS
+  才重新規劃一次路徑(比較慢),而這層邊界是每一步控制迴圈都會檢查:量測機器狗目前位置(base_pos,身體中心)離最近的牆有多遠(wall_dist),如
+  果太近就直接介入,覆蓋掉原本要下的轉向指令,逼它轉離牆壁。目的是當 ViPlanner
+  的規劃還沒跟上、或算得不夠準時,有一道快速反應的防線,不會等到真的撞牆。
+
+  第二層:為什麼是「半對角線」,不是單純的身體寬度
+
+  量測 wall_dist 用的是身體中心點到牆的距離,但機器狗有實際的長寬(GO2_HALF_LENGTH=0.325m、GO2_HALF_WIDTH=0.14m),身體中心沒撞到牆不代
+  表身體邊緣沒撞到——尤其是側著移動或轉彎的時候。
+
+  這裡試過三種算法:
+
+  1. 最早版本:單純用一個固定值(如 0.35m)當安全距離,把機器狗當一個點——直走時沒問題,但側身平移或轉彎時側邊會刮到牆。
+  2. 方向性投影版本:用機器狗「當下的朝向」算出身體在牆的方向上實際伸出多遠(hx*|cosθ|+hy*|sinθ|)——這個值會隨朝向變化,直走時比較準,但
+     轉彎途中朝向一直在變,用「檢查那一瞬間」的朝向算出來的值,會低估轉彎中身體實際會掃到的範圍,結果轉到一半外側角落刮到牆。
+  3. 目前用的半對角線版本:不管機器狗朝哪個方向,它身體最遠的那個角(對角線頂點)離中心永遠是同一個距離——GO2_HALF_DIAGONAL = 
+     hypot(0.325, 0.14) ≈ 0.354m。用這個當安全邊界,等於問「不管怎麼轉,身體有沒有可能碰到牆」,而不是「現在這個瞬間有沒有碰到牆」,所
+     以轉彎中也不會低估。代價是直線前進時會比實際需要的更保守一點,但這是刻意的取捨。
+
+  第三層:實際觸發後怎麼處理
+
+  effective_wall_dist = clamp(0.2, 0.6, BODY_CLEARANCE + GO2_HALF_DIAGONAL)
+                       = clamp(0.2, 0.6, 0.15 + 0.354)
+                       ≈ 0.50m
+
+  BODY_CLEARANCE=0.15m 是身體之外再留的緩衝,兩者加起來再夾在 [0.2, 0.6] 之間。
+
+  一旦 wall_dist < 0.50m:
+  - 算出「逃離牆壁」的方向(escape_heading_error,牆推開機器狗的反方向)
+  - 算出 severity(0~1):剛好在 0.5m 邊界上是 0,真的貼到牆是 1
+  - 正常情況下,把 ViPlanner 原本想要的轉向(target_wz)跟「逃離方向」依 severity 做混合(blended_wz),越靠近牆,逃離的權重越大
+  - 極端情況(severity>0.7 且混合後幾乎抵消成 0):代表逃離方向剛好跟原本方向沖銷,直接改用純逃離指令,避免卡在原地不動
+  - 同時把前進速度也跟著 severity 降低(離牆越近走越慢)
+
+  第四層:跟護欄分類的關係
+
+  這套邏輯原本統一套用在所有牆(含樓梯護欄),但護欄很薄、走廊本來就窄,套用這個保守邊界會讓走廊「看起來」到處都太靠近牆,一度造成不敢轉
+  進樓梯。當時的權宜之計是讓護欄完全跳過這層邊界。現在因為找到並修好了真正的根因(入口/landing 那兩個 on_stairs 判斷抖動的
+  bug),就把護欄也改回用一樣的半對角線邊界了——現在護欄跟真牆待遇完全一樣。
+
+關於真實辨識
+可以,但這是完全不同量級的工作——要另外訓練一個語意分割模型,不是像現在這樣微調 ViPlanner 自己的軌跡網路。
+  
+  具體要做什麼
+
+  1. 準備一個小型分割網路(例如輕量 CNN),輸入 RGB(或深度)影像,輸出每個像素屬於「地板/樓梯/牆」哪一類
+  2. 準備訓練資料——好消息是我們已經有現成的標籤了:之前收集 v3 資料時,每一張影像都同時存了「真實世界座標算出來的正確語意圖(ground
+     truth)」,可以直接拿來當這個新分割模型的訓練目標,不用重新人工標記
+  3. 訓練這個分割模型,讓它學會從畫面直接認出「這是樓梯」
+
+  跟現在做的深度分類器比,取捨在哪
+
+  ┌─────────────────┬────────────────────────┬─────────────────────────────────────────────────────────────────────────────────┐
+  │                 │ 深度分類器(現在在做的) │                                  真實分割模型                                   │
+  ├─────────────────┼────────────────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+  │ 需要額外訓練一  │ 不用,直接套用現成邏輯  │ 要,從頭訓練一個分割網路                                                         │
+  │ 個新模型嗎      │                        │                                                                                 │
+  ├─────────────────┼────────────────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+  │ 能分辨「這是樓  │ 不能,只看高度          │ 可以,能認形狀                                                                   │
+  │ 梯」嗎          │                        │                                                                                 │
+  ├─────────────────┼────────────────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+  │ 上實機會不會有  │ 幾乎沒有,純深度運算，  │ 有：這個模型是在模擬場景的合成畫面上訓練的，換到真實相機拍到的畫面（材質、光影  │
+  │ 問題            │ 跟模擬/現實無關        │ 、雜訊都不一樣）時，準確率可能會掉，這就是常見的 sim-to-real gap，要另外處理    │
+  ├─────────────────┼────────────────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+  │                 │ 小（已經做完了，剩下的 │                                                                                 │
+  │ 工作量          │ 是重訓 ViPlanner       │ 大（新模型架構、訓練迴圈、驗證，還要處理 sim-to-real）                          │
+  │                 │ 本身）                 │                                                                                 │
+  └─────────────────┴────────────────────────┴─────────────────────────────────────────────────────────────────────────────────┘
+
+  簡單講:深度分類器犧牲一點精確度，換來「幾乎不用擔心模擬跟現實不一樣」；真實分割模型精確度高，但要多做一層「模擬訓練出來的東西搬到
+  現實會不會失真」的工。
+
+
+
+
+
+
+
+三種樓梯
+u l 直
+上樓走平 地停
+目標點z 加  在頭頂
+
+
+
+
+模擬濃煙
+  2. 真正影響導航的煙霧——在控制迴圈裡，偵測到狗的位置進入二樓範圍時，對深度相機讀到的資料加雜訊/局部失效（模擬紅外線深度感測器被煙
+     霧散射干擾的真實現象），這樣才會真的讓 ViPlanner
+     收到「看不清楚」的輸入，測試牠在感測退化時的行為。工程量比較大，但才是真正測試機器狗在濃煙環境下表現的做法。
+     
+     
+     
+  1. Stall（卡住偵測）的進度判斷基準改了
+  - 原本：偵測「是否有在接近目標」時，是拿機器狗目前位置跟最終目標（二樓房間中心，(-8.05,0,3.35)，離很遠）的距離來算進度。
+  - 問題：爬樓梯前幾階時，高度變化相對這個遙遠目標的總距離幾乎不影響數字，導致系統誤判「沒有進展」，於是觸發強制轉向/後退去逃離牆壁
+    ，把剛爬一點的進度又拉回去。
+  - 改成：拿機器狗目前位置跟當前實際導航目標（planning_goal，例如樓梯口、下一階）的距離來算進度，這樣爬樓梯的進展才會被正確認可。
+  
+  2.「太高要繞開」的閃避機制排除了自己正在爬的那條樓梯
+  - 原本：只要前方有一段樓梯「從目前高度爬不上去」，且方向跟目前目標一致，就會把目標點往旁邊/往後推開，避開它。
+  - 問題：這個判斷沒有排除「目前正在瞄準要爬的同一條樓梯自己的上面幾階」——樓梯本來就是要一階一階爬，上面幾階從地面看當然「太高」，
+    但那不是障礙物，是同一條樓梯的延續。結果機器狗一瞄準樓梯口，馬上被自己樓梯的上面幾階「嚇退」，往後推。
+  - 改成：新增一個判斷，先找出目前目標所屬的整條樓梯（用相鄰方塊做
+    flood-fill），閃避機制忽略屬於這條樓梯自己的階梯，只對「其他」太高樓梯生效。
+
+
+
+
+
+  一、初始化（開始跑之前，只做一次）
+
+  - 載入步態政策：policy = torch.jit.load(GAIT_POLICY_CKPT, ...)（HIMLoco，一個 TorchScript 模型）
+  - 載入 ViPlanner：vip = VIPlannerAlgo(model_dir=..., fear_threshold=..., device=...)
+  - 初始化機器狗的 Articulation（關節控制介面），站到預設站姿角度 DEFAULT_ANGLES
+
+  二、主迴圈（每個物理步都跑一次）
+
+  每一步的流程分成「兩個不同頻率」的部分：
+
+  (A) 每一步都做：讀狀態
+
+  - 讀機器狗目前的世界座標位置/姿態、角速度、12 個關節的角度跟速度（帶了容錯重試，前面解釋過）
+
+  (B) 每 REPLAN_EVERY_N_STEPS（目前=8）步才做一次：ViPlanner 這一層，決定「要往哪走」
+
+  1. 從機器狗頭上的攝影機拿深度影像 depth_np
+  2. 如果在煙霧區（base_pos[2] >= smoke_zone_z_min），對深度影像加雜訊+隨機掉點模擬煙霧
+  3. 算出語意分割影像
+     sem（目前是用場景裡已知的樓梯/牆壁/地板方塊座標直接算出來的「完美標記」，不是真的語意分割網路推論出來的——除非開
+     VIPLANNER_USE_GEOMETRIC_SEMANTIC）
+  4. 目標點轉換到相機座標系：goal_robot_frame = vip.goal_transformer(goal_t, cam_pos_t, cam_quat_t)
+  5. 丟進 ViPlanner 的核心：_, traj_cam, fear = vip.plan_dual(depth_t, sem_t, goal_robot_frame) → 拿到一條預測軌跡 +
+     一個危險程度分數 fear
+  6. 從軌跡上挑一個往前看的點，算出 heading_error（該往哪個方向轉）——但如果正在找樓梯/爬樓梯（seeking_stairs=True），這個方向會整個
+     不採用網路自己算的，改成直接用「目標樓梯口在哪」的幾何座標算方向，因為之前測試發現網路自己預測的路徑在爬樓梯時不可靠
+  7. 這個方向再疊加上牆壁閃避、置中輔助、卡住偵測強制轉向等一堆修正邏輯
+  8. 角度平滑：用 (cos, sin) 向量做 EMA，避免角度在 ±180° 邊界亂跳（之前聊過的擺頭問題）
+  9. 最後整理成 target_vx / target_wz 這兩個數字——這就是 ViPlanner 這層唯一輸出給下一層的東西
+
+  (C) 每一步都做：HIMLoco 這一層，決定「腿怎麼動」
+
+  1. 把「目前的 vx/wz 指令」+「機器狗自己的本體感覺」（機身角速度、重力方向在機身座標系的投影、12
+     個關節角度相對預設站姿的差、關節速度、上一次輸出的動作）打包成一個 45 維向量
+  7. 這個方向再疊加上牆壁閃避、置中輔助、卡住偵測強制轉向等一堆修正邏輯
+  8. 角度平滑：用 (cos, sin) 向量做 EMA，避免角度在 ±180° 邊界亂跳（之前聊過的擺頭問題）
+  9. 最後整理成 target_vx / target_wz 這兩個數字——這就是 ViPlanner 這層唯一輸出給下一層的東西
+
+  (C) 每一步都做：HIMLoco 這一層，決定「腿怎麼動」
+
+  1. 把「目前的 vx/wz 指令」+「機器狗自己的本體感覺」（機身角速度、重力方向在機身座標系的投影、12
+     個關節角度相對預設站姿的差、關節速度、上一次輸出的動作）打包成一個 45 維向量
+  2. 塞進一個長度 6（OBS_HISTORY_LEN）的歷史佇列，串起來變成 270 維
+  3. 丟進 policy(obs_tensor) 得到 12 維動作輸出
+  4. 動作乘上 ACTION_SCALE（0.25）再加上預設站姿角度，變成 12 個關節的目標角度
+  5. dog_art.set_joint_position_targets(...) 直接送出去，PhysX 接手模擬實際的關節運動
+
+  (D) 每一步都做：更新攝影機位置，準備下一輪
+
+  - 依機器狗目前的位置姿態，算出頭上攝影機下一幀該在哪、朝哪看
+
+  關鍵總結
+
+  兩層之間唯一的橋樑就是 (vx, wz) 這兩個數字。ViPlanner 那層完全不知道機器狗的步態怎麼跑，HIMLoco
+  那層完全不知道前面有沒有樓梯、牆壁——它只知道「現在要往前多快、往左右轉多快」，然後盡量用學過的步態去達成，同時自己顧平衡。整個 「
+  智慧」被切成兩個互不透明的模組，靠一個極窄的速度指令介面串起來。
+
+如何銜接
+這三支程式是一層接一層呼叫的。run_stair_usd.sh 不會直接呼叫 viplanner_control.py，中間還隔了一支場景腳本：
+
+  主機
+   └─ run_stair_usd.sh                          ① 啟動 docker container
+        │  docker run ... isaac-sim.sh --exec open_scene_stair_usd.py
+        ▼
+  container 裡的 Isaac Sim
+   └─ open_scene_stair_usd.py                   ② 建場景
+        │  from viplanner_control import run_walk
+        │  await run_walk(..., goal_pos=waypoints, precomputed_aabbs=aabbs, ...)
+        ▼
+   └─ viplanner_control.py :: run_walk()        ③ 控制迴圈（狗怎麼走）
+
+  ① ~/isaac-sim-docker/run_stair_usd.sh：負責「環境」
+  - 用 docker run 開 Isaac Sim 5.1 的 container，因為主機的 glibc 太舊，沒辦法直接跑 Isaac Sim。
+  - 掛載資料夾，把主機上的路徑對應到 container 裡：
+  | 主機                                | container 裡                                              |
+  |-------------------------------------|-----------------------------------------------------------|
+  | ~/isaac-sim-docker/home/            | /home/isaacsim/（場景腳本在這裡）                         |
+  | ~/Desktop/viplanner2/               | /home/isaacsim/viplanner2/（viplanner_control.py 在這裡） |
+  | ~/Desktop/viplanner2/training_data/ | /home/isaacsim/training_data/（收集的資料寫到這裡）       |
+  | ~/Downloads/                        | /home/isaacsim/Downloads/（Stair.usdc）                   |
+  | ~/fire_dog/                         | /home/isaacsim/fire_dog/（狗的模型 go2.usd）              |
+
+  - 用環境變數決定模式，例如 COLLECT=1 會設定 VIPLANNER_COLLECT_DATA，EPISODES 會設定 VIPLANNER_COLLECT_EPISODES。
+  - 最後執行 isaac-sim.sh --exec /home/isaacsim/open_scene_stair_usd.py，叫 Isaac Sim 啟動後去跑場景腳本。
+
+  ② ~/isaac-sim-docker/home/open_scene_stair_usd.py：負責「這個場景長什麼樣」
+  - 載入 Stair.usdc。
+  - 算出語意標註，也就是哪裡是地板、樓梯、牆、欄杆，存成 aabbs。
+  - 設定目標點 waypoints、狗的出生點，把狗放進場景。
+  - 讀取環境變數，判斷要不要收集資料。
+  - 把上面這些全部當參數，交給 run_walk()。
+
+  ③ ~/Desktop/viplanner2/isaac_sim_bridge/viplanner_control.py：負責「狗怎麼走」
+  - 啟動物理模擬，載入 HIMLoco 步態 policy 和 ViPlanner 模型。現在用的是 v3，v5 訓練好之後要改這支程式裡的
+    _FINETUNED_MODEL_DIR。
+  - 迴圈裡每一步依序做這些事：
+    a. 讀相機的深度圖。
+    b. 用 aabbs 產生語意圖。
+    c. ViPlanner 規劃路線。
+    d. 樓梯導引和防撞修正（今天改的都在這裡）。
+    e. HIMLoco 算出關節動作。
+  - 判斷到達目標、卡住、掉下去、跌倒。
+  - 收集模式時，把深度圖、語意圖、相機位置存到 training_data/。
+
+  這樣分開的好處：viplanner_control.py 是所有場景共用的。舊的 open_scene_stairs.py、L 型樓梯場景也都是呼叫同一個
+  run_walk()，只是各自傳入不同的場景、目標點和語意標註。所以：
+
+  - 要改目標點、出生點、語意標註：改 ②，只影響 Stair.usdc 這個場景。
+  - 要改狗的走法或判斷邏輯：改 ③，所有場景都會受影響。
+  - 要改掛載、啟動參數、收集到哪個資料夾：改 ①。
+
+  銜接 1：run_stair_usd.sh → open_scene_stair_usd.py
+
+  靠的是 docker 掛載 加上 Isaac Sim 的 --exec 參數。
+
+  run_stair_usd.sh：
+  20:  -v /home/itri/isaac-sim-docker/home:/home/isaacsim:rw        # 主機資料夾掛進 container
+  22:  ... ./isaac-sim.sh --exec /home/isaacsim/open_scene_stair_usd.py
+  - 第 20 行把主機的 ~/isaac-sim-docker/home/ 掛載成 container 裡的 /home/isaacsim/，所以 container 裡看得到
+    open_scene_stair_usd.py。
+  - 第 22 行的 --exec 告訴 Isaac Sim：開完視窗後，在它自己的 Python 環境裡執行這支腳本。
+
+  這支腳本不是用一般的 python xxx.py 跑的，而是在 Isaac Sim 內部執行，所以才能使用 omni.usd、pxr 這些 Isaac Sim
+  專用的模組。
+
+  ---
+
+  銜接 2：環境變數，從 shell 傳到 Python
+
+  run_stair_usd.sh：
+  11:  -e VIPLANNER_COLLECT_DATA="${COLLECT:+/home/isaacsim/training_data/${COLLECT_DIR:-stair_usd_scene}}"
+  12:  -e VIPLANNER_COLLECT_EPISODES="${EPISODES:-30}"
+  ↓ docker 的 -e 會把這些值設成 container 裡的環境變數
+
+  open_scene_stair_usd.py：
+  182:    _collect_dir = os.environ.get("VIPLANNER_COLLECT_DATA") or None
+  183:    _collect_episodes = int(os.environ.get("VIPLANNER_COLLECT_EPISODES", "30"))
+  - 執行 COLLECT=1 ./run_stair_usd.sh 時，VIPLANNER_COLLECT_DATA 會是資料夾路徑，代表收集模式。
+  - 沒有設 COLLECT 時，它是空字串，經過 or None 變成 None，代表驗證模式。
+
+  ---
+
+  銜接 3：open_scene_stair_usd.py → viplanner_control.py
+
+  靠的是 掛載 + sys.path + 普通的 Python import。
+
+  run_stair_usd.sh：
+  17:  -v /home/itri/Desktop/viplanner2:/home/isaacsim/viplanner2:ro   # viplanner2 專案掛進 container
+  open_scene_stair_usd.py：
+  120:    if "/home/isaacsim/viplanner2/isaac_sim_bridge" not in sys.path:
+  121:        sys.path.insert(0, "/home/isaacsim/viplanner2/isaac_sim_bridge")   # 讓 Python 找得到它
+  ...
+  180:    from viplanner_control import run_walk                                    # import 函式
+  ...
+  186:        await run_walk(
+  189:            dog_prim_path="/World/go2",        # 狗在場景裡的路徑
+  190:            goal_pos=waypoints,                # ← 目標點從這裡傳進去
+  193:            precomputed_aabbs=aabbs,           # ← 語意標註（地板/樓梯/牆/欄杆）
+  195:            max_steps=26000,
+  196:            collect_data_dir=_collect_dir,     # ← 收集模式要用的資料夾（銜接 2 傳來的）
+              ...)
+  viplanner_control.py：
+  361: async def run_walk(stage, app, dog_prim_path, goal_pos, obstacle_boxes, floor_box,
+                          max_steps=13000, precomputed_aabbs=None, ...):
+  viplanner_control.py 本身不知道是哪個場景，所有場景相關的資訊都是當作參數傳進來的。
+
+  ---
+
+  為什麼用 async / await
+
+  110: async def _open():
+  ...
+  205: asyncio.ensure_future(_open())
+  Isaac Sim 的畫面更新和物理模擬，都跑在它自己的事件迴圈裡。如果腳本直接寫一個 while 迴圈，整個 Isaac Sim 會卡住。
+
+  所以這裡用 ensure_future 把 _open() 排進 Isaac Sim 的事件迴圈。run_walk() 裡面每走一步，都會執行 await 
+  app.next_update_async()，把控制權交還給 Isaac Sim，讓它更新一幀畫面和物理，下一幀再回來繼續。
+
+  ---
+
+  總結：資料怎麼流動
+
+  你下的指令        COLLECT=1 EPISODES=30 ./run_stair_usd.sh
+                          │ docker -e / -v
+                          ▼
+  container 環境變數 VIPLANNER_COLLECT_DATA=/home/isaacsim/training_data/stair_usd_scene
+                          │ os.environ.get()
+                          ▼
+  open_scene_stair_usd.py  建場景 → waypoints, aabbs, _collect_dir
+                          │ import + await run_walk(goal_pos=waypoints, precomputed_aabbs=aabbs, collect_data_dir=...)
+                          ▼
+  viplanner_control.py     控制狗走路；收集模式下把資料寫進 collect_data_dir
+                          │ 掛載是 rw
+                          ▼
+  主機上的 ~/Desktop/viplanner2/training_data/stair_usd_scene/
+
+● 步態權重是 viplanner_control.py
+  自己載入、自己呼叫的，沒有經過其他程式。銜接分成三段：載入權重、每一步餵觀測值給它、把輸出變成關節指令。
+  63: GAIT_POLICY_CKPT = f"{VIPLANNER2_ROOT}/0908/policy_0430_134538_6340.pt"
+
+  ---
+
+  1. 權重檔在哪、怎麼載入
+
+  # viplanner_control.py
+  58: VIPLANNER2_ROOT = f"{CONTAINER_HOME}/viplanner2"        # = /home/isaacsim/viplanner2
+  63: GAIT_POLICY_CKPT = f"{VIPLANNER2_ROOT}/0908/policy_0430_134538_6340.pt"
+  ...
+  919: policy = torch.jit.load(GAIT_POLICY_CKPT, map_location=device)
+  920: policy.eval()
+  - 主機上的實際位置是 ~/Desktop/viplanner2/0908/policy_0430_134538_6340.pt。它是透過 run_stair_usd.sh 的 -v
+    ~/Desktop/viplanner2:/home/isaacsim/viplanner2 掛載進 container 的，跟之前講的掛載是同一條。
+  - 這是 TorchScript 格式（torch.jit.load），網路結構和權重存在同一個檔案裡，所以不需要 HIMLoco
+    的原始程式碼就能執行。
+  - 同一個資料夾裡還有 env_config.json 和 go2.urdf，是當初訓練這個 policy
+    用的設定。控制程式裡的參數必須跟它們一致。
+  - 要換步態權重，就改第 63 行的路徑。 新的權重必須用同樣的觀測格式訓練，否則下面第 2 段的輸入會對不上。
+
+  ---
+
+  2. 每一步怎麼餵觀測值給 policy
+
+  1166: base_ang_vel_body = ... * ANG_VEL_SCALE                    # 機身角速度（3）
+  1167: projected_gravity = ...                                    # 重力在機身座標的方向（3），用來知道有沒有傾斜
+  1168: commands_scaled = np.array([vx, 0.0, wz]) * COMMANDS_SCALE  # ★ 速度指令（3）
+  1169: dof_pos_rel = dof_pos - DEFAULT_ANGLES                     # 12 個關節角度，相對於預設站姿
+  1170: dof_vel_scaled = dof_vel * DOF_VEL_SCALE                   # 12 個關節角速度
+  1172: obs_now = concat([commands_scaled, base_ang_vel_body, projected_gravity,
+                         dof_pos_rel, dof_vel_scaled, last_actions])      # 共 45 維
+  1175: obs_history.appendleft(obs_now)                            # 保留最近 6 幀（OBS_HISTORY_LEN = 6）
+  1176: full_obs = concat(obs_history)                             # 6 × 45 = 270 維
+  1181: action = policy(obs_tensor)[0]                             # → 12 維輸出
+
+  這裡 ★ 那一行就是 ViPlanner 和步態的接點：
+
+  ViPlanner（看深度圖和語意圖，規劃路線）
+     → 加上樓梯導引、防撞、脫困這些修正
+     → 得到前進速度 vx 和轉向速度 wz
+     → commands_scaled 放進 obs 的前 3 維
+     → HIMLoco policy 根據這個指令和自己的身體狀態，決定 12 個關節怎麼動
+
+  ViPlanner 只決定往哪走、走多快，腳怎麼踩是 HIMLoco 自己決定的。所以爬樓梯時跌倒，屬於 HIMLoco
+  這一層的問題。重新訓練 ViPlanner 可以讓路線更好，但沒辦法讓腳步本身更穩。
+
+  ---
+
+  3. policy 的輸出怎麼變成關節動作
+
+  114: DEFAULT_ANGLES = [0.1, 0.8, -1.5, ...]     # 預設站姿的 12 個關節角
+  117: KP, KD = 40.0, 1.0                         # 關節 PD 控制的剛性和阻尼
+  118: ACTION_SCALE = 0.25
+  ...
+  1187: joint_targets = DEFAULT_ANGLES + ACTION_SCALE * action
+  1188: dog_art.set_joint_position_targets(joint_targets, joint_names=JOINT_NAMES)
+  policy 輸出的是「相對於預設站姿的偏移量」。乘上 0.25 再加回預設站姿，就得到關節的目標角度，再交給 Isaac Sim 的 PD
+  控制器去追，KP = 40、KD = 1。
+
+  ---
+
+  這些參數必須跟訓練時一致
+
+  JOINT_NAMES 的順序、DEFAULT_ANGLES、KP/KD、ACTION_SCALE、各個 *_SCALE、OBS_HISTORY_LEN = 6、obs
+  的組成和順序，全部都要跟 policy 當初訓練時的設定一模一樣，設定記錄在 0908/env_config.json。只要錯一個，policy
+  收到的輸入就跟訓練時不同，可能站不穩或走不動，而且不會有任何錯誤訊息。
+  
+關於權重如何運作
+  這個網路長什麼樣子
+
+  它由兩個小網路組成：
+
+                270 個數字（最近 6 幀的身體感覺）
+                          │
+           ┌──────────────┴──────────────┐
+           ▼                             │
+     ┌─ estimator（估計器）─┐             │
+     │ 270 → 128 → 64 → 19 │             │ 只取最新那一幀的 45 個數字
+     └─────────┬───────────┘             │
+               │ 拆成兩部分                │
+       ┌───────┴───────┐                 │
+       ▼               ▼                 ▼
+     vel（3）       z（16）            obs（45）
+    估計的身體速度  地形/狀態的特徵
+       └───────────────┴────────┬────────┘
+                                ▼  串起來：3 + 16 + 45 = 64 個數字
+                      ┌─ actor（決策器）─┐
+                      │ 64 → 512 → 256 → 128 → 12 │
+                      └──────────┬───────┘
+                                 ▼
+                     12 個數字（每個關節要轉多少）
+
+  為什麼要分兩個？ 真實的狗身上沒有感測器能直接量到「我現在跑多快」、「腳下的地形是什麼」。所以先由 estimator
+  從最近 6 幀的關節和身體角速度，推測出速度和地形特徵（這就是 HIMLoco 方法的核心），再交給 actor 決定動作。
+
+  ---
+
+  「網路長什麼樣子」和「權重數字」的差別
+
+  以 actor.0  Linear (512, 64) 這一層為例：
+
+  - 網路結構：「這一層把 64 個數字變成 512 個數字」，然後接一個 ELU（一種把負數壓扁的函數）。這是計算的規則。
+  - 權重數字：要變過去，需要一個 512 × 64 的數字表格（32768 個數字），再加上 512
+    個偏移量。這些數字是訓練出來的，就是這個大腦學到的「知識」。
+
+  整個網路總共有 243231 個權重數字。
+
+  上面印出來的 forward() 那段程式碼，就是「網路長什麼樣子」的完整描述，包括先跑 estimator、把結果切成 vel（前 3
+  個）和 z（後 16 個）、把 z 做 normalize、取 obs 的前 45 個，最後串起來丟進 actor。
+
+  ---
+  為什麼打包成同一個檔案很方便
+
+  一般的 PyTorch 權重檔（例如 torch.save(model.state_dict())）只存了 243231 
+  個數字，沒有存計算規則。要使用它，必須先有 HIMLoco 的原始程式碼，在 Python 裡寫出「estimator 有幾層、actor
+  有幾層、怎麼接起來」，再把數字填進去。
+  TorchScript（torch.jit.save）則是把上面那段 forward() 計算流程也一起存進檔案，所以：
+
+  policy = torch.jit.load("policy_0430_134538_6340.pt")   # 結構和數字一起載入
+  action = policy(obs)                                     # 直接就能算
+
+  這就是為什麼 viplanner_control.py 裡完全沒有 HIMLoco 的程式碼，卻可以直接用這個步態。
+
+  ---
+
+  跟之前講的「規格必須一致」怎麼連起來
+
+  網路的第一層 estimator.0 Linear (128, 270) 只能吃剛好 270 個數字，actor 則固定取其中前 45
+  個當作「最新一幀」。所以 viplanner_control.py 組 obs 時，必須剛好是 6 幀 × 45
+  個數字，而且最新的一幀要放在最前面。這就是程式裡 obs_history.appendleft(obs_now) 用 appendleft 的原因。
+
+
+所以狗的驅動主程式是viplanner_control.py，它先判斷出輸入的深度還有語意圖，然後再去抓我給的policy_0430_134538_6340.pt驅動狗往前走這樣嘛
+● 對，大方向是這樣。補充三個細節，會更精確：
+
+  1. 裡面其實有兩個模型，分工不同
+
+  ┌──────┬───────────────────────────────────────────────────────────────────┬─────────────────────────────────┐
+  │      │                          ViPlanner 模型                           │            步態模型             │
+  │      │                                                                   │   policy_0430_134538_6340.pt    │
+  ├──────┼───────────────────────────────────────────────────────────────────┼─────────────────────────────────┤
+  │ 負責 │ 往哪走（路線規劃）                                                │ 腳怎麼動（關節控制）            │
+  ├──────┼───────────────────────────────────────────────────────────────────┼─────────────────────────────────┤
+  │ 輸入 │ 深度圖 + 語意圖 + 目標點                                          │ 45 × 6 = 270 個身體感覺數字     │
+  ├──────┼───────────────────────────────────────────────────────────────────┼─────────────────────────────────┤
+  │ 輸出 │ 一條路線 + fear 值                                                │ 12 個關節動作                   │
+  ├──────┼───────────────────────────────────────────────────────────────────┼─────────────────────────────────┤
+  │ 檔案 │ v3：training_data/models/..._stairs_finetune_v3/（現在正在訓練 v5 │ 0908/policy_0430_134538_6340.pt │
+  │      │  來取代它）                                                       │                                 │
+  └──────┴───────────────────────────────────────────────────────────────────┴─────────────────────────────────┘
+
+  你現在在訓練的是 ViPlanner，步態模型沒有動。
+
+  2. 兩個模型都只在開始時載入一次
+  每一步是跟著 Isaac Sim的畫面更新在跑
+  不是每走一步都重新讀檔，而是啟動時用 torch.jit.load() 載入一次，之後每一步直接呼叫已經在記憶體裡的模型。
+
+  3. 兩個模型的執行頻率不一樣
+
+  每一步（每 0.02 秒，50 Hz）：
+   ├─ 讀狗的身體狀態（位置、關節角度、角速度…）
+   ├─ 每 8 步一次（REPLAN_EVERY_N_STEPS = 8，約 0.16 秒）：
+   │    ├─ 讀相機深度圖
+   │    ├─ 用 aabbs 產生語意圖
+   │    ├─ ViPlanner 模型 → 規劃路線、算 fear
+   │    └─ 樓梯導引 / 防撞 / 脫困修正 → 決定新的 vx（前進）、wz（轉向）
+   ├─ 把 vx、wz 放進 45 個數字的前 3 個
+   ├─ 步態模型 → 12 個關節動作
+   ├─ 送給 Isaac Sim 的關節馬達
+   └─ 檢查：到達目標？卡住？掉下去？跌倒？
+
+  步態模型每一步都要跑，腳的動作必須連續、即時。ViPlanner 則是每 8 
+  步才重新規劃一次，路線不需要變得那麼快，而且它比較耗運算。中間的 7 步，步態模型會沿用上一次的 vx、wz。
+
+  所以完整的說法是：
+
+  ▎ viplanner_control.py 是主程式。它每隔一小段時間用深度圖和語意圖讓 ViPlanner 
+  ▎ 決定「往哪走、走多快」（vx、wz），然後每一步都把這個指令連同身體感覺交給步態模型 
+  ▎ policy_0430_134538_6340.pt，算出 12 個關節怎麼動，驅動狗前進。
+
+● 先更正我前面說錯的一件事：我之前說控制迴圈是「每 0.02 秒（50 Hz）」，那是 env_config.json
+  裡訓練時的設定，不是這支程式的實際情況。檔案開頭的說明寫得很清楚（第 6~10 行）：這裡是跟著 Isaac Sim
+  的畫面更新在跑，大約 60 Hz，不是精確的 50 Hz，作者也註明了「拿來做 demo
+  夠用，但跟訓練環境數值上不完全一致」。這可能也是在階梯上偶爾跌倒的原因之一。
+
+  （另外我注意到你在檔案第 13 行以後加了一段目標點說明的註解，我沒有動它。）
+
+  下面照執行順序，列出 viplanner_control.py 跟步態權重有關的每一段：
+
+  ---
+
+  一、準備階段（程式啟動時執行一次）
+
+  ① 定義規格（檔案上方的模組常數，預設是 Go2）
+
+  63:  GAIT_POLICY_CKPT = f"{VIPLANNER2_ROOT}/0908/policy_0430_134538_6340.pt"   # Go2 權重檔路徑
+  112: JOINT_NAMES = ["FL_hip_joint", "FL_thigh_joint", "FL_calf_joint", ...]   # 12 個關節的順序
+  118: DEFAULT_ANGLES = [0.1, 0.8, -1.5, -0.1, 0.8, -1.5, 0.1, 1.0, -1.5, -0.1, 1.0, -1.5]  # 站姿
+  121: KP, KD = 40.0, 1.0                                                     # 關節馬達的剛性和阻尼
+  122: ACTION_SCALE = 0.25                                                    # 輸出要乘的比例
+  168: LIN_VEL_SCALE, ANG_VEL_SCALE, DOF_VEL_SCALE = 2.0, 0.25, 0.05          # obs 的縮放
+  169: COMMANDS_SCALE = [2.0, 2.0, 0.25]                                      # 速度指令的縮放
+  170: OBS_HISTORY_LEN = 6                                                    # 保留 6 幀
+  193: MAX_SPEED = 0.6                                                        # 最快前進速度 m/s
+
+  🆕 ①-2 機器人設定檔（247–333 行，會覆蓋上面那組 Go2 數值）
+
+  247: ROBOT = os.environ.get("VIPLANNER_ROBOT") or "go2"     # 不設就是 go2，舊場景不受影響
+
+  ┌──────────────┬────────────────────────────┬─────────────────────┬───────────────────────────────────────────────────┐
+  │              │        go2（預設）         │   leo（273 行起）   │                growin（295 行起）                 │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ 步態權重     │ 0908/policy_0430_134538_63 │ 1013/leo/policy_380 │ 1013/growin_description/weight/policy_1001_111828 │
+  │              │ 40.pt                      │ 0.pt                │ _8940.pt                                          │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ 站姿 DEFAULT │ 0.1, 0.8, -1.5 …           │ 0.0, ±0.6/±0.7, ∓1. │ 0.0, ∓0.6/∓0.7, -1.3                              │
+  │ _ANGLES      │                            │ 3（右側軸向相反）   │                                                   │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ KP / KD      │ 40 / 1                     │ 970 / 26.2          │ 1100 / 25                                         │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │              │                            │ 髖                  │                                                   │
+  │ ACTION_SCALE │ 0.25（12 個關節都一樣）    │ 0.125、大腿和小腿   │ 髖 0.125、大腿和小腿 0.25                         │
+  │              │                            │ 0.25                │                                                   │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ 站立高度     │ 0.30 m                     │ 0.58 m              │ 0.53 m                                            │
+  ├──────────────┼────────────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ 相機         │ 原本的 Go2 相機            │ 直式 600×960，FOV   │ 640×360，另有 4 台輔助相機                        │
+  │              │                            │ 78°                 │                                                   │
+  └──────────────┴────────────────────────────┴─────────────────────┴───────────────────────────────────────────────────┘
+
+  三種機器人共用同一套 HIMLoco 格式：觀測 45×6 = 270、輸出 12 個動作，JOINT_NAMES 的順序也一樣。
+
+  ② 抓住狗、設定關節馬達（run_walk() 裡）
+
+  641: dog_art = Articulation(prim_paths_expr=dog_prim_path, ...)   # 抓住場景裡的 /World/go2
+  643: dog_art.initialize()
+  649: _JOINT_IDX = [dog_art.dof_names.index(n) for n in JOINT_NAMES]   # 🆕 先查出 12 個關節的索引
+  665: dog_art.set_joint_positions(DEFAULT_ANGLES, joint_indices=_JOINT_IDX)        # 關節直接擺成站姿
+  666: dog_art.set_joint_position_targets(DEFAULT_ANGLES, joint_indices=_JOINT_IDX) # 馬達目標也設成站姿
+  667: dog_art.set_gains(kps=KP, kds=KD, joint_indices=_JOINT_IDX)                  # 12 個關節馬達設 KP/KD
+  🆕 改用索引是因為 leo 的 USD 裡還有固定關節（腳、base_joint、imu）。用關節名稱去找的話，索引會超過 12 而報錯。
+
+  ③ 載入步態權重
+
+  1291: print("robot profile: ...")                                  # 🆕 印出目前用哪台機器人和 KP/KD
+  1293: policy = torch.jit.load(GAIT_POLICY_CKPT, map_location=device)   # 讀進 GPU
+  1294: policy.eval()                                                    # 切成推論模式
+
+  ④ 每個 episode 開始時清空記憶
+
+  1350–1355: (episode ≥ 2) 狗放回起點、關節回站姿、速度歸零                    # 🆕 這段也改用 _JOINT_IDX
+  1397: obs_history = deque([np.zeros(45)] * 6, maxlen=6)   # 6 幀全部歸零
+  1398: last_actions = np.zeros(12)                         # 「上一步的動作」歸零
+  1399: vx, wz = MAX_SPEED, 0.0                             # 初始速度指令：直走 0.6 m/s
+
+  ---
+
+  二、控制迴圈（每一步都跑，大約 60 Hz）
+
+  1515: for step in range(1, max_steps + 1):
+  1516:     await app.next_update_async()        # 讓 Isaac Sim 跑一幀物理和畫面
+
+  ⑤ 讀狗的身體狀態
+
+  1531: base_pos, base_quat = dog_art.get_world_poses()                     # 機身位置、姿態
+  1543: ang_vel_world = dog_art.get_angular_velocities()                    # 機身角速度
+  1544: dof_pos = dog_art.get_joint_positions(joint_indices=_JOINT_IDX)     # 12 個關節角度
+  1545: dof_vel = dog_art.get_joint_velocities(joint_indices=_JOINT_IDX)    # 12 個關節角速度
+  1549: dof_effort = dog_art.get_measured_joint_efforts(...)                # 🆕 關節力矩，只給腿部里程計用，不會餵給步態模型
+
+  ⑥ 組成 45 個數字
+
+  1645: base_ang_vel_body = 角速度轉成機身座標 × 0.25
+  1646: projected_gravity = 重力方向轉成機身座標
+  1647: commands_scaled   = [vx, 0, wz] × [2.0, 2.0, 0.25]     ← ★ ViPlanner 的指令在這裡進來
+  1648: dof_pos_rel       = 關節角度 - 站姿（站姿依機器人而定）
+  1649: dof_vel_scaled    = 關節角速度 × 0.05
+  1651: obs_now = concat([commands_scaled, base_ang_vel_body, projected_gravity,
+                          dof_pos_rel, dof_vel_scaled, last_actions])     # 3+3+3+12+12+12 = 45
+
+  ⑦ 疊成 6 幀，餵給步態模型
+
+  1654: obs_history.appendleft(obs_now)            # 最新的放最前面
+  1655: full_obs = concat(obs_history)             # 270 個
+  1656: full_obs = clip(full_obs, -100, 100)
+  1658: obs_tensor = torch.from_numpy(full_obs)...
+  1660: action = policy(obs_tensor)[0]             # ★ 呼叫步態模型 → 12 個數字
+  1661: action = clip(action, -100, 100)           # 🆕 輸出也做了裁切
+  1663: last_actions = action.copy()
+
+  ⑧ 驅動關節
+
+  1665: joint_targets = DEFAULT_ANGLES + ACTION_SCALE * action              # 🆕 ACTION_SCALE 可能是每個關節不同的陣列
+  1666: if _GHOST: joint_targets = DEFAULT_ANGLES                           # 🆕 幽靈模式：不走步態，機身直接被移動
+  1668: dog_art.set_joint_position_targets(joint_targets, joint_indices=_JOINT_IDX)  # ★ 交給關節馬達
+  跟以前一樣，這裡設定的是「目標角度」，由 PD 馬達用 KP/KD 去追。差別是 KP/KD 現在依機器人而定：Go2 是 40/1，leo 是
+  970/26.2，growin 是 1100/25。
+
+  ---
+
+  三、ViPlanner 怎麼改變 vx、wz（餵給 ⑥ 的指令）     
+
+  # 每 8 步一次（COMMAND_HOLD_STEPS = 8）。🆕 VIPLANNER_RATES 模式下，改成每次規劃完就更新
+  2750: if |heading_error| < 死區: _viplanner_target_wz = 0                    # 🆕 偏很少就不轉
+  2753: else: _viplanner_target_wz = clip(YAW_GAIN(1.2) * heading_error, ±0.9)
+  2754: _viplanner_target_vx = 0.6 if |heading_error| < 1.0 else 0.18
+  2768: _viplanner_target_vx *= fear_scale（最低 0.4）                        # fear 越高越慢
+  2773: 離目標 < 1 m 時減速
+  2780: 下樓時最快 0.3 m/s（只在 GUIDANCE=perception 時）                    # 🆕
+  2785: target_wz, target_vx = _viplanner_target_wz, _viplanner_target_vx
+
+  # 每一步：各種修正可能覆蓋 target_vx / target_wz
+  2848: 樓梯中線拉回         target_wz = 混合(target_wz, pull_wz)
+  2880: 靠近牆壁時推離       target_wz = 混合(target_wz, escape_wz)；2897/2899 target_vx 降速
+  2990: 卡住時後退脫困       target_wz / target_vx = 朝後退目標
+  2994: 卡住時原地轉         target_wz = ±最大轉速
+
+  # 每一步：平滑
+  3012: SMOOTH_RATE = 0.15                           
+  3013: vx += (target_vx - vx) * 0.15
+  3014: wz += (target_wz - wz) * 0.15         → 下一步的 ⑥ 就用這個新的 vx、wz
+
+  ---
+
+  一張圖串起來（流程沒變，只是權重和參數依機器人切換）
+
+            ┌────────────── 每 8 步 ──────────────┐
+            │ 深度圖 + 語意圖 + 目標點             │
+            │      ↓ ViPlanner 模型               │
+            │ heading_error → target_vx/target_wz │
+            └──────────────────┬──────────────────┘
+                               ↓ 樓梯導引 / 防撞 / 脫困修正（每步）
+                               ↓ 平滑 ×0.15（每步）
+                             vx, wz
+                               ↓
+    身體狀態（⑤）──→ 45 個數字（⑥）──→ 6 幀 = 270（⑦）
+                                            ↓ 步態權重（go2 / leo / growin 各一個 .pt）
+                                         12 個 action
+                                            ↓ 站姿 + ACTION_SCALE × action（⑧）
+                                      關節目標角度 → PD 馬達（KP/KD 依機器人）
+                                            ↓
+                                      Isaac Sim 物理模擬 → 腿動起來
+                                            ↓
+                                   下一步再從 ⑤ 讀新的身體狀態
+
+問題：所以一開始啟動會同時仔入步態權重跟viplanner模型，在一開始機器狗走得時候不是viplanner控制的，就只是單純的步態權重跟初始速度嘛
+● 前半句對，後半句不太對。
+
+  ✅ 一開始會同時載入兩個模型
+
+  919: policy = torch.jit.load(GAIT_POLICY_CKPT, ...)        # 步態權重
+  923: vip = VIPlannerAlgo(model_dir=VIPLANNER_MODEL_DIR, ...) # ViPlanner 模型
+  兩個都在 run_walk() 開始時載入一次，然後才進入走路的迴圈。
+
+  ❌ 並不是一開始先只靠步態權重和初始速度走一段
+
+  ViPlanner 在第 1 步就開始規劃了：
+
+  1096: for step in range(1, max_steps + 1):
+  ...
+  1172:     obs_now = ...[vx, 0, wz]...         # ① 先用目前的 vx、wz 組 obs
+  1181:     action = policy(obs_tensor)          # ② 步態模型算動作
+  ...
+  1208:     if step % REPLAN_EVERY_N_STEPS == 1:  # ③ step=1 時 1 % 8 == 1 → 成立，立刻規劃
+                depth = camera.get_depth() ...    #    ViPlanner 看深度圖 + 語意圖 → 決定 target_vx/target_wz
+  ...
+  2257:     vx += (target_vx - vx) * 0.15         # ④ vx、wz 往 ViPlanner 的目標靠近
+  2258:     wz += (target_wz - wz) * 0.15
+  關於 * 0.15
+  ● 0.15 是平滑係數（程式裡叫 SMOOTH_RATE，第 2256 行）。意思是：每一步只往目標走 15% 的距離，不是一次跳到目標。
+
+  用數字看
+
+  假設狗現在 vx = 0.6（快走），ViPlanner 突然說要慢下來，target_vx = 0.1：
+
+  ┌──────┬──────────────────────────────┬───────┐
+  │ 步數 │             計算             │  vx   │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 0    │ 起始值                       │ 0.600 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 1    │ 0.600 + (0.1 − 0.600) × 0.15 │ 0.525 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 2    │ 0.525 + (0.1 − 0.525) × 0.15 │ 0.461 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 3    │ 0.461 + (0.1 − 0.461) × 0.15 │ 0.407 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 5    │ …                            │ 0.322 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 10   │ …                            │ 0.199 │
+  ├──────┼──────────────────────────────┼───────┤
+  │ 20   │ …                            │ 0.119 │
+  └──────┴──────────────────────────────┴───────┘
+
+  每一步都把「剩下的差距」縮小 15%，也就是剩 85%。所以一開始變化快，越接近目標變得越慢，大約 18~20 步（約 0.3 
+  秒）會走完 95% 的差距，程式第 2246 行的註解也是這樣寫的。
+
+  為什麼不直接 vx = target_vx
+
+  因為步態模型受不了指令突然跳動。
+
+  - ViPlanner 每 8 步才重新規劃一次，每次給的目標可能跟上次差很多，例如上次說左轉 0.5，這次說右轉 0.5。
+  - 防撞、脫困這些修正邏輯也會隨時改寫 target_vx、target_wz。
+  - 如果直接照單全收，步態模型收到的指令就會一下 0.6、一下
+    0.1、一下左轉、一下右轉。腳步會亂掉，在樓梯上尤其容易踩空或跌倒。
+
+  這就像開車：你決定要停車，不會把油門瞬間換成全力煞車，而是慢慢鬆油門、慢慢踩煞車，車子才不會晃。
+
+  0.15 這個值大一點或小一點會怎樣
+
+  ┌─────────────────┬────────────────────────────────────┬────────────────────────────┐
+  │    平滑係數     │                效果                 │            缺點            │
+  ├─────────────────┼────────────────────────────────────┼────────────────────────────┤
+  │ 大（例如 0.5）     │ 反應快，ViPlanner 一說轉彎就馬上轉   │ 指令跳動大，步態容易不穩   │
+  ├─────────────────┼────────────────────────────────────┼────────────────────────────┤
+  │ 0.15（目前）         │ 約 0.3 秒跟上                       │ 折衷                       │
+  ├─────────────────┼────────────────────────────────────┼────────────────────────────┤
+  │ 小（例如 0.05）   │ 非常平順                            │ 反應太慢，要撞牆了才開始轉 │
+  └─────────────────┴────────────────────────────────────┴────────────────────────────┘
+
+
+  規劃的時間點是第 1、9、17、25…步，每 8 步一次。
+
+  所以實際的時間線是：
+
+  ┌────────────┬────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │    時間    │                                            誰在控制                                            │
+  ├────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 進入迴圈前 │ 兩個模型都還沒在控制。程式先把關節擺成預設站姿、設定 KP/KD，跑 10 幀讓狗站穩（第 454~462       │
+  │            │ 行）。換下一個 episode 時也一樣，第 961~968 行會把狗傳送回起點、擺回站姿。                     │
+  ├────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 第 1 步    │ 步態模型用初始速度 vx = 0.6, wz = 0（第 1006 行）算動作。同一步稍後，ViPlanner                 │
+  │            │ 第一次規劃，給出目標速度。                                                                     │
+  ├────────────┼────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 第 2 步起  │ vx、wz 每步往 ViPlanner 的目標靠近 15%，大約 20 步（約 0.3 秒）就幾乎完全跟上。                │
+  └────────────┴────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  所以「只靠初始速度」的時間只有第 1 步，之後的速度指令就逐漸被 ViPlanner 接手了。初始速度設成直走 0.6
+  m/s，是因為狗的出生點本來就面向 Flight1，直走剛好合理。
+
+  另外要澄清一點：步態權重從頭到尾都在控制腿，每一步都會呼叫它。ViPlanner
+  從來不會直接控制關節，它只負責給「往哪走、走多快」的指令。所以不是「先由步態控制，再換成 ViPlanner
+  控制」，而是兩者一直同時在運作：ViPlanner 給方向，步態負責執行。
+
+所以open_scene_stair_usd.py是怎麼接到viplanner_control.py的 
+在open_scene_stair_usd.py
+● 兩支程式是靠 「import 函式 + 呼叫時傳參數」 接起來的，跟一般 Python
+  程式呼叫另一個檔案的函式一樣。open_scene_stair_usd.py 負責準備好所有東西，最後呼叫 viplanner_control.py 裡的
+  run_walk()，把東西全部交過去。
+
+  照 open_scene_stair_usd.py 的執行順序：
+
+  ---
+
+  步驟 1：Isaac Sim 執行這支腳本
+
+  205: asyncio.ensure_future(_open())
+  Isaac Sim 用 --exec 執行這個檔案時，只會跑到這一行。這行把 _open() 排進 Isaac Sim 的事件迴圈，真正的工作都在
+  _open() 裡面。
+
+  步驟 2：準備要交給 run_walk() 的東西（_open() 裡）
+
+  113:  stage = ctx.get_stage()                    # ① 取得目前的場景（USD stage）
+  124:  scene.GetReferences().AddReference(STAIR_USD)   #    把 Stair.usdc 載入場景
+  130:  aabbs = _build_aabbs(stage)                # ② 算出語意標註：地板/樓梯/牆/欄杆
+  149:  waypoints = [ ... ]                        # ③ 目標點
+  166:  dog_xform = UsdGeom.Xform.Define(stage, "/World/go2")             # ④ 在場景建一個 /World/go2
+  170:  dog_xform...AddReference("/home/isaacsim/fire_dog/go2.usd")        #    把狗的模型放進去
+  182:  _collect_dir = os.environ.get("VIPLANNER_COLLECT_DATA") or None    # ⑤ 收集模式？
+  183:  _collect_episodes = int(os.environ.get("VIPLANNER_COLLECT_EPISODES", "30"))
+
+  步驟 3：讓 Python 找得到 viplanner_control.py
+
+  120:  if "/home/isaacsim/viplanner2/isaac_sim_bridge" not in sys.path:
+  121:      sys.path.insert(0, "/home/isaacsim/viplanner2/isaac_sim_bridge")
+  viplanner_control.py 跟這支腳本不在同一個資料夾：一個在 viplanner2/isaac_sim_bridge/，一個在
+  isaac-sim-docker/home/。Python 預設找不到它，所以要先把它所在的資料夾加進 sys.path，也就是 Python
+  尋找模組的清單。
+
+  步驟 4：import 並呼叫
+
+  180:  from viplanner_control import run_walk     # 從 viplanner_control.py 拿出 run_walk 這個函式
+
+  186:  await run_walk(
+  187:      stage=stage,                           # ① 場景
+  188:      app=omni.kit.app.get_app(),            #    Isaac Sim 本身（用來推進每一幀）
+  189:      dog_prim_path="/World/go2",            # ④ 狗在場景裡的位置名稱
+  190:      goal_pos=waypoints,                    # ③ 目標點
+  191:      obstacle_boxes=None,                   #    舊場景用的參數，這裡不用
+  192:      floor_box=None,                        #    舊場景用的參數，這裡不用
+  193:      precomputed_aabbs=aabbs,               # ② 語意標註
+  195:      max_steps=26000,                       #    每個 episode 最多幾步
+  196:      collect_data_dir=_collect_dir,         # ⑤ 收集模式的資料夾（None = 驗證模式）
+  197:      collect_episodes=_collect_episodes,    # ⑤ 要收幾個 episode
+    )
+  await 的意思是：把控制權交給 run_walk()，等它跑完才回來。run_walk() 是一個無限循環的 episode
+  迴圈，驗證模式下會一直跑；收集模式下收滿 episode 數才會結束。所以實際上，之後所有的事情都在 run_walk() 裡面發生。
+
+  ---
+
+  參數在另一邊怎麼被使用
+
+  viplanner_control.py 第 361 行：
+  ---
+
+  參數在另一邊怎麼被使用
+
+  viplanner_control.py 第 361 行：
+  async def run_walk(stage, app, dog_prim_path, goal_pos, obstacle_boxes, floor_box,
+                     max_steps=13000, precomputed_aabbs=None, ..., collect_data_dir=None, collect_episodes=0,
+  ...):
+
+  ┌──────────────────────────────────┬─────────────────────────────────────────────────────────────────────────┐
+  │           傳進去的參數           │                       在 run_walk() 裡拿來做什麼                        │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ stage                            │ 建立 PhysicsScene、相機、腳底接觸感測器                                 │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ app                              │ 每一步 await app.next_update_async()，讓 Isaac Sim 前進一幀             │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ dog_prim_path="/World/go2"       │ Articulation(prim_paths_expr=dog_prim_path)，抓住這隻狗，讀關節、送指令 │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ goal_pos=waypoints               │ 依序當作目標，到了就換下一個                                            │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ precomputed_aabbs=aabbs          │ 產生語意圖、判斷是否在樓梯上、防撞、挑下一階                            │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ max_steps                        │ 每個 episode 的步數上限                                                 │
+  ├──────────────────────────────────┼─────────────────────────────────────────────────────────────────────────┤
+  │ collect_data_dir /               │ 有值就把深度圖、語意圖、相機位姿存檔                                    │
+  │ collect_episodes                 │                                                                         │
+  └──────────────────────────────────┴─────────────────────────────────────────────────────────────────────────┘
+
+
+現在要解決語意的問題以上實機 分四個階段
+有用深度推算和mask2former
+我認為可以兩者做合併，以深度去區分可不可以爬上去，而後mask2former來判斷前面是什麼
+viplanner只吃一張語意圖輸入，所以要兩者的結果做疊合
+
+  整體流程
+
+  同一顆相機（RGB 和深度逐像素對齊）
+     ├─ 深度圖 → geometric_semantic_v2 → 地板 / 樓梯 / 障礙物 / 無效
+     └─ RGB 影像 → Mask2Former → ADE20K 的 150 類 → 對應成 ViPlanner 的類別
+                                         ↓
+                           逐像素融合（規則見下表）
+                                         ↓
+                      一張 ViPlanner 顏色格式的語意圖 → ViPlanner
+
+  融合規則
+
+  ┌──────────────────────────┬────────────────────────────────┬─────────────────────┬───────────────────────────────────┐
+  │          深度說          │         Mask2Former 說         │      最後輸出       │               理由                │
+  ├──────────────────────────┼────────────────────────────────┼─────────────────────┼───────────────────────────────────┤
+  │ 可走（地板/樓梯）                     │ 也是可走類（floor、stairs、roa │ 用深度的（地板或樓   │ 「是不是樓梯、多高」由幾何決定比  │
+  │                          │ d…）                                                            │ 梯）                                     │ 較準                              │
+  ├──────────────────────────┼────────────────────────────────┼─────────────────────┼───────────────────────────────────┤
+  │ 可走                     │ 不可走類（人、水、家具、玻璃門   │ 用 Mask2Former 的   │ 平平的但不能走的東西，只有看外觀  │
+  │                          │ …）                                                                │                     │ 才知道                            │
+  ├──────────────────────────┼────────────────────────────────┼─────────────────────┼───────────────────────────────────┤
+  │ 障礙物（太高、洞、懸崖）     │ 可走類                         │ 障礙物              │ 安全優先：幾何量到不能走，就不能  │
+  │                          │                                │                     │ 走                                │
+  ├──────────────────────────┼────────────────────────────────┼─────────────────────┼───────────────────────────────────┤
+  │ 障礙物                   │ 障礙物類（牆、人、欄杆…）                 │ 用 Mask2Former      │ 類別更細。例如「人」在 ViPlanner  │
+  │                          │                                │ 的類別              │ 裡有獨立的成本                    │
+  ├──────────────────────────┼────────────────────────────────┼─────────────────────┼───────────────────────────────────┤
+  │ 無效（太近、太遠、玻璃反   │ 任何類別                       │ 用 Mask2Former 的   │ 深度量不到的地方，靠影像補        │
+  │ 光）                                                │                                │                     │                                   │
+  └──────────────────────────┴────────────────────────────────┴─────────────────────┴───────────────────────────────────┘
+
+  階段 1：改良幾何語意（ViPlanner 的輸入）
+  - 改用相對於狗腳底的高度來分類。腳底高度可以從關節角度和腿長算出來，傾斜角度用 IMU
+    的重力方向，兩者在真實的狗上都量得到。
+  - 分成四類：
+    - 地板：跟腳底差不多高
+    - 可爬台階：高度差在一階以內，例如 < 0.2 m
+    - 障礙物：太高
+    - 懸崖/洞：比腳底低太多，當障礙物處理，這樣樓梯井的縫和沒有牆的邊緣就會被擋下來
+  - 驗證方法：在 Stair.usdc 裡，拿它算出來的結果跟現在的 AABB 標準答案逐像素比對，算出準確率。
+  怎麼運作
+
+  1. 基準線：狗現在腳踩的高度
+     不用移動，從 12 個關節角度和腿長就算得出 4 隻腳在身體下方多遠。再用 IMU
+     的重力方向把身體的傾斜修正掉，就知道「我現在站的地面」在哪個高度。
+  2. 前方的東西：相機遠遠就看到了
+     深度相機每次規劃都會拍一張圖，每個像素都能換算成一個 3D 點。拿每個點的高度去跟基準線比：
+
+                相機
+                 ●───────────────────────►  看到前方 0.5~8 m 的東西
+                /|\
+    狗 ▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀
+    ─────────────────── 基準線（腳底，高度 0）
+
+    前方看到的點：
+    高度 +0.02 m → 地板（可以走）
+    高度 +0.18 m → 可爬台階（一階以內）
+    高度 +1.20 m → 障礙物（牆）
+    高度 -0.80 m → 懸崖/洞（當障礙物）
+
+  所以狗在樓梯前 2 m 的地方，就已經知道「前面有一階 0.18 m 高的台階，可以爬」；看到牆就知道「前面 1.2 m
+  高，不能走」。ViPlanner 拿到這張語意圖，在撞上去之前就會規劃繞開或是對準樓梯。
+  ● 圖存在 geo_eval_v2/heightmap_unsafe_1.png。結果跟我們猜的部分一樣，但原因更具體。
+  
+  看圖：
+  - 左圖：紅色是一條沿著牆腳的斜帶。
+  - 中圖（俯視）：相機離牆非常近，只有 0.2 m。綠色地板是一個三角形，紅色剛好是一條緊貼著牆的直線（y ≈ 0.2）。
+  - 右圖（側視）是關鍵：紅色的點集中在高度 0.05~0.17 m，而且有 83%（2679 / 3239）是垂直表面。
+
+  判斷： 紅色是牆腳的一段垂直面，高度大約 17 cm。這個高度剛好跟場景裡的踢腳板（skirting board）吻合，Stair.usdc
+  裡的 mesh 名稱就有 Skirting。踢腳板比牆面凸出一點點，所以它的頂端是一條很窄的水平面，高度大約 17 cm。
+
+  所以錯誤是兩步連在一起發生的：
+  1. 踢腳板頂端那條窄邊，被 flood fill 當成「比地板高 17 cm 的一階台階」，可以走上去，所以標成樓梯。這是根本原因。
+  2. 接著，踢腳板的正面（垂直面），在它頂端的「台階」下方 0.22 m
+     以內，就被「立面歸屬」規則歸成樓梯或地板。這就是我們猜的第 1 點。
+
+  所以只改「立面歸屬」只能修掉一半，踢腳板頂端還是會被當成可以踩的台階。
+
+  修法（兩個一起做）：
+  1. 可以站上去的表面要有最小寬度：一個水平面至少要有一定的深度（例如 10~15
+     cm），才能算是「可以踩的台階」。踢腳板頂端只有 1~2 cm，會被排除；真正的踏面有 27 cm，不受影響。
+  2. 立面歸屬只限台階邊緣：垂直面只有在「上方是夠寬的可走表面」時，才算台階的立面。
+
+  這兩個也都只用到深度幾何，實機一樣能用。而且實機場景裡踢腳板、門檻、牆邊的凸條很常見，這個修法也是必要的。
+
+
+  你擔心的狀況確實存在：相機的死角
+
+  相機裝在狗的頭上、斜斜往前看，腳正前方和兩側很近的地方是看不到的：
+  把相機近端裁切改成 0.2 m。先確認 Isaac Sim 設定裁切距離的 API：在 viplanner_control.py 加一個常數 CAMERA_NEAR_CLIP = 0.2，建立相機時套用
+
+        相機
+         ●
+        /  \  ← 視野
+       /    \
+    ▀▀▀▀  [死角]  看得到的範圍 →
+
+  比較會出問題的有這幾種情況：
+  - 原本就在視野內、靠近後變成死角：例如走近台階時，最後 0.3 m 已經看不到了。
+  - 側面的東西：轉彎時，身體側邊的欄杆可能根本不在視野內。今天在 Flight2 側身卡在欄杆上，就是這種情況。
+  - 細的東西：欄杆柱子太細時，深度相機可能抓不到。
+
+  解法：讓狗「記得」剛剛看過的東西
+
+  這就是我在階段 3 提到的局部高度圖：
+
+  - 每拍一張深度圖，就把看到的點累積到一張以狗為中心的地圖上，例如前後左右各 3 m、每格 5 cm，每格記錄高度。
+  - 狗往前走時，用腿部運動學和 IMU 估計自己移動了多少，把地圖跟著平移。這種短距離的估計誤差很小，跟前面那個累積了
+    12 m 的漂移不一樣。
+  - 所以東西走進死角後，地圖上還會記得它在那裡。防撞、判斷懸崖都查這張地圖，而不是只看當下這一張深度圖。
+
+  真實的四足機器狗（包括 ANYmal、Unitree 的一些研究）普遍都是這樣做的，叫做 elevation mapping。
+
+  最後一道保險
+
+  就算地圖漏掉了，狗真的撞上去或踩空，還有身體本身的感覺可以用：
+  - 腳底接觸感測器偵測到「腳伸下去沒踩到東西」，就是踩空。
+  - 關節力矩或速度異常，例如一直往前推卻沒有前進，就是撞到東西了。
+
+  現在的控制程式已經有類似的「卡住偵測」，但它是看「有沒有更接近目標」。之後可以改成直接看身體的反應。
+
+
+  階段 2：不需要標註的訓練流程
+  - 直接從 USD 場景的碰撞 mesh 取樣點雲，不用手寫 aabbs。
+  - 用同一套高度規則產生 cost map。
+  - 用幾何語意當輸入收集資料，訓練新模型。
+  ● 對，下一步就是階段 2：用幾何語意當輸入，重新訓練一版 ViPlanner。現在的 v3/v5/v6 都是用 AABB
+  標準答案的語意圖訓練的，換成深度算出來的語意圖之後，模型看到的輸入會不一樣，必須重新訓練。
+
+  要完成這一步，有四件事要做：
+
+  1. 把 geometric_semantic_v2 接進控制程式
+  - 用一個開關（例如 VIPLANNER_SEMANTIC_MODE=geo_v2）切換語意來源。開了之後，ViPlanner
+    的即時輸入和收集時存的語意圖，都改用深度演算法產生。
+  - 「相機離腳底多高」改用關節角度算出來的腳底位置（程式裡已經有 go2_foot_positions_body_frame()），不再用固定的 0.47
+    m，這樣才符合實機的做法。
+  - 要先確認速度：目前演算法是純 Python 寫的，每幀大約要 0.2 秒；而 ViPlanner 每 8 步（約 0.13
+    秒）就要規劃一次，現在的速度不夠快。需要先優化，例如改寫成向量化運算。
+
+  2. Cost map 不再用 aabbs
+  - 直接從 Stair.usdc 的碰撞 mesh 取樣點雲。
+  - 用同一套「地板／樓梯／障礙物」的高度規則，在點雲上分類，再產生 cost map。這樣訓練時的「答案」也不需要手寫標註。
+
+  3. 收集資料
+  - 用新的相機設定（0.2 m 裁切）加上幾何語意。
+  - 控制程式的導引和防撞暫時還是查 aabbs，那是階段 3 才要改的部分。這只影響收集時狗怎麼走，不影響存下來的語意圖。
+
+  4. 訓練
+
+
+  階段 3：控制程式不再依賴 aabbs（最大的部分）
+  - 從深度圖即時建一張以狗為中心的局部高度圖。
+  - 樓梯導引、挑下一階、防撞、脫困、判斷懸崖，全部改成查這張高度圖。
+  - 今天修的那些邏輯大部分要重寫，run_walk() 也會有大幅度的改動。
+
+  階段 4：上實機要面對的問題
+  - 定位：ViPlanner 需要知道目標點相對於狗在哪裡。真實的狗需要可靠的定位，例如 SLAM
+    或視覺慣性里程計，這是另一個獨立的大題目。
+  - 相機：模擬裡的相機規格（解析度、視角、裝設位置）要改成跟真實 Go2 的深度相機一樣，深度圖也要加上真實的雜訊。
+  
+  
+  
+  
+關於林岳想測試不同HZ
+● 頻率模式的程式已經寫好，語法檢查也通過了，但還沒實際跑過。
+
+  用法
+  cd ~/isaac-sim-docker
+  GEO_V2=1 RATES=15,5,10 ./run_stair_usd.sh
+  RATES 依序是深度、語意、ViPlanner 的頻率（Hz），用模擬時間計算。不設 RATES 的話，行為跟原本一樣。
+
+  viplanner_control.py 改了這些地方
+  1. 每一步開頭先排程，三件事各自按自己的頻率執行：
+     - 深度（15 Hz）：拍深度圖，同時記下拍攝時的相機姿態、時間，以及用關節角度算出的腳底高度。
+     - 語意（5 Hz）：用「最新的深度圖」和它拍攝時的姿態產生語意圖。GEO_V2=1 時用深度推算，否則用標準答案。
+     - ViPlanner（10 Hz）：拿「最新深度」和「最新語意」來規劃。這時的語意圖可能比深度舊 0~200 ms。
+  2. 目標點換算到相機座標時，用深度拍攝當下的姿態，因為規劃出的路徑是在那張深度圖的座標系裡。
+  3. ViPlanner 的新指令在規劃當下就生效。原本要等到「每 8 步」的時間點才會套用。
+  4. 每 50 次規劃印一次語意圖的延遲，例如 semantics older than the depth ... by mean 100 ms, max 200 ms。
+
+  限制
+  - 不能用在收集訓練資料：這個模式下，一筆樣本的語意圖和深度圖不是同一時間拍的，程式註解裡也寫了。
+  - 步態控制每一步都在跑，不受這三個頻率影響。
+
+  還沒測試的原因：50 個 episode 的收集還在進行，目前 8/50，GPU 和 isaac-sim 這個 container
+  名稱都被佔用。這次修改不會影響正在跑的收集，因為它啟動時已經載入舊版程式了。
+
+
+  導引邏輯有哪些
+
+  ViPlanner 只負責「看影像、給出一條路徑」，下面這些是我們另外加在它外面的規則。
+
+  改變 ViPlanner 要去哪裡
+  - 找樓梯：目標比狗高很多、狗又不在樓梯上時，不把真正的目標給 ViPlanner，改給它最近一段爬得上去的樓梯入口。
+  - 避開爬不上去的台階：旁邊有高度差太大的樓梯面時，把規劃目標往反方向推 1 m。
+  - 封鎖走過的樓梯：過了某個中途點後，把第一段樓梯在語意圖上改標成牆，避免牠又走回去。這個場景目前沒啟用。
+
+  改變轉向和速度
+  - 樓梯中線輔助：在樓梯上偏離中線超過 0.25 m 時，輕輕往中線帶。
+  - 牆壁安全距離：每一步都檢查離最近的牆或欄杆多遠，太近就把轉向往外推，同時減速。
+  - 樓梯邊緣虛擬牆：在每段樓梯兩側放看不見的牆，用同一套推離機制防止從側邊掉下去，靠得很近時幾乎停下來再轉。
+  - 依 fear 減速：ViPlanner 回報的危險程度越高走越慢，最慢保留 40% 速度。
+  - 接近目標減速：離目標 1 m 內放慢。
+
+  卡住時的處理
+  - 卡住偵測：每 200 步檢查一次，離目標沒有靠近 0.15 m 以上就強制轉向 80 步，轉不出來就後退重新對準。
+  - 跌倒偵測：機身傾斜超過 70° 持續 200 步就結束這一趟。
+
+  除了依 fear 減速、接近目標減速、卡住偵測和跌倒偵測，其餘都是直接查場景裡樓梯和牆的真實座標，實機上沒有這些座標可查。所以這
+  次訓練出來的模型在模擬裡表現好，有一部分是這些規則的功勞。
+
+
+
+
+
+● 做法分兩邊：模擬那邊把資料用 ROS 2 話題發出來，rviz 這邊加顯示項目去訂閱那些話題。
+
+  1. 模擬端：發布話題
+
+  改的是 isaac_sim_bridge/viplanner_control.py。裡面原本就有一個 ROS 2 節點在發點雲和語意圖，我在同一個節點多開兩個發布者：
+
+  depth_pub = pc_node.create_publisher(Image,  "/go2/depth_view", 1)
+  route_pub = pc_node.create_publisher(Marker, "/go2/route", 200)
+
+  然後在控制迴圈每次重新規劃時（每 8 步一次）發布：
+
+  深度圖（make_depth_image_msg）
+  - 拿相機的深度陣列，縮小一半成 300×480。
+  - 把 0.2~20 m 換算成灰階值，無效的像素設成 0。
+  - 包成 sensor_msgs/Image 發出去。
+
+  路線圖（_route_marker）：每一種東西是一個 visualization_msgs/Marker，座標直接用模擬的世界座標，frame_id 是 world。
+
+  ┌──────────────────────┬────────────────────────────┬──────────────────────────────────────┐
+  │         內容         │        Marker 類型         │               資料來源               │
+  ├──────────────────────┼────────────────────────────┼──────────────────────────────────────┤
+  │ 走過的路線           │ LINE_STRIP，每個點各自上色 │ 每次規劃時把機身位置加進一個清單     │
+  ├──────────────────────┼────────────────────────────┼──────────────────────────────────────┤
+  │ ViPlanner 路徑       │ LINE_STRIP                 │ 模型輸出的路徑轉成世界座標           │
+  ├──────────────────────┼────────────────────────────┼──────────────────────────────────────┤
+  │ 規劃目標、起點、目標 │ SPHERE                     │ 控制迴圈裡現成的變數                 │
+  ├──────────────────────┼────────────────────────────┼──────────────────────────────────────┤
+  │ 牆和樓梯外框         │ LINE_LIST                  │ 場景的語意方塊，畫每個方塊頂面的矩形 │
+  └──────────────────────┴────────────────────────────┴──────────────────────────────────────┘
+
+  所有 Marker 共用 /go2/route 一個話題，用 ns（名稱空間）和 id 區分，所以 rviz 裡可以個別開關。每一趟開始時發一個 DELETEALL
+  把舊的清掉。
+
+  2. rviz 端：加顯示項目
+
+  我複製原本的 go2_pointcloud.rviz，另存成 go2_route.rviz，加了三樣：
+
+  - 一個 Image 顯示項目，訂閱 /go2/depth_view。
+  - 一個 Marker 顯示項目，訂閱 /go2/route。
+  - 視角從 Orbit 改成 TopDownOrtho（正上方俯視）。
+
+  Fixed Frame 維持 world。因為 Marker 的座標本來就是世界座標，不需要另外發布 TF。
+
+  如果要手動在任何一個 rviz 視窗加，步驟是：左下角 Add → By topic 分頁 → 選 /go2/depth_view 底下的 Image，再加一次選
+  /go2/route 底下的 Marker。
+
+  3. 連線設定
+
+  rviz 和 Isaac Sim 容器要用同一組 ROS 設定才互相看得到，這部分是原本就有的：
+
+  - ROS_DOMAIN_ID=60
+  - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+  - 容器用 --network=host 啟動，所以跟主機在同一個網路上。
+
+  主機上的 rviz 是 ROS 2 Foxy，容器裡是 Isaac Sim 自帶的 ROS 2，這兩種訊息格式相容，所以可以直接互通。
+
+  mask2former
+  ● Mask2Former 第一步測完了：用現成的權重、完全沒有針對這個場景訓練，在模擬畫面上就認得出樓梯。
+
+  怎麼測的
+
+  - growin 在 Stair.usdc 跑一趟到 3F，沿途存下相機的彩色影像（617 張，取 155 張測）。
+  - 用 COCO 資料集訓練好的 Mask2Former 跑推論，再用 ViPlanner
+    原始專案附的類別對照表轉成語意顏色圖。對照表我確認過了，裡面確實有「樓梯」這一類。
+  - 逐像素跟模擬的標準答案語意比對。
+
+  結果
+
+  ┌──────────────────┬──────────────┬──────────────┬──────────────┬──────────────────────────┬──────────┐
+  │     模型大小     │ 樓梯認成樓梯 │ 地板認成可走 │ 牆認成障礙物 │ 有樓梯的 63 張裡找到樓梯 │ 每張耗時 │
+  ├──────────────────┼──────────────┼──────────────┼──────────────┼──────────────────────────┼──────────┤
+  │ 小（Swin-Tiny）  │ 68%          │ 49%          │ 89%          │ 39 張                    │ 21 ms    │
+  ├──────────────────┼──────────────┼──────────────┼──────────────┼──────────────────────────┼──────────┤
+  │ 大（Swin-Large） │ 87%          │ 59%          │ 92%          │ 56 張                    │ 34 ms    │
+  └──────────────────┴──────────────┴──────────────┴──────────────┴──────────────────────────┴──────────┘
+  
+    做了哪些改動
+
+  - 新建獨立的 conda 環境 mask2former_env，沒有動到其他環境或 Isaac Sim 容器。
+  - run_stair_usd.sh 多了 SAVE_RGB=1，搭配 COLLECT=1 會多存彩色影像。
+  - 測試腳本在 training_data/tools/m2f_test.py。
+  - 對照圖（彩色 | Mask2Former | 標準答案）在
+    training_data/growin_rgb_test/m2f_mask2former-swin-large-coco-panoptic/，可以直接打開看。
+
+
+● 1. 是的，現在找樓梯是靠 Mask2Former
+
+  畫面上跑的是新模式 GUIDANCE=perception，每次規劃的流程是：
+
+  1. 相機彩色影像送給 Mask2Former，拿回哪些像素是樓梯。
+  2. 那些像素配上深度，換算成 3D 點。
+  3. 對這些點擬合一個斜面：斜面往上的方向就是樓梯的方向，坡度落在合理範圍才算真的樓梯。
+  4. 最低那一排的中心當入口，中繼目標設在入口前對正的位置，上去後沿樓梯中線往前。
+  5. 樓梯離開視野時，先照記住的方向繼續走；機身回到水平一陣子後，判定這段爬完了，原地左轉找下一段。
+
+  這段已經沒有查場景的標準答案座標。第 1 趟實際爬上了 3F 那一層（四段樓梯都是靠它自己找到的）。
+
+  還有兩處仍在用標準答案，要說清楚：
+
+  - 防撞和邊緣防掉落：貼牆太近時的推開、樓梯邊緣的虛擬護欄，還是查標準答案。
+  - 深度換算 3D 時用的相機位置：用的是模擬給的狗的位置。
+
+  2. 狗和目標的高度差，現在是用模擬的標準答案
+
+  這塊還沒換掉。目前的算法是：
+
+  - 目標高度：指令給的 3F 目標點（z = 9.71 m）。
+  - 狗的高度：模擬器直接回報的機身高度，減掉站立高度得到腳底高度。
+  - 兩者相減超過 1 m，就判定「目標在別的樓層」，進入找樓梯模式；小於 1 m 就當作同一層，直接走向目標。
+
+  log 裡看得到這個數字一路變小：出發時 9.39 m，爬完兩段剩 5.0 m，現在是 0.69 m，所以已經切到「同一層」。
+
+  腿部里程計估高度是下一塊，還沒做。做好後只要把「狗的高度」這一項換成估出來的值，其他邏輯不用動。
+  腿的里程已經做了
+  
+
+
+● 對，是用 Python 接的，但 Mask2Former 和 ViPlanner 不在同一支程式裡。它們是兩個獨立的程式，中間用本機的 HTTP 連線傳影像。
+
+  為什麼要分成兩個程式
+
+  ViPlanner 跑在 Isaac Sim 的 docker 容器裡，Mask2Former 需要的套件版本跟容器裡的不一樣，硬裝在一起容易把模擬環境弄壞。所以
+  Mask2Former 放在主機上獨立的 conda 環境 mask2former_env 裡，當成一個服務。
+
+  資料怎麼流動
+
+  每次重新規劃（約每 8 步一次）：
+
+  1. 控制迴圈從模擬相機取出彩色影像。
+  2. 把影像的原始位元組用 HTTP POST 送到 http://127.0.0.1:8765/seg。
+  3. 主機上的服務跑 Mask2Former，得到每個像素的類別。
+  4. 服務把類別換成 ViPlanner 的語意顏色，回傳一張同樣大小的顏色圖。
+  5. 控制迴圈拿這張圖取代原本的標準答案語意，連同深度圖一起丟給 ViPlanner。
+
+  來回一次約 34 ms。
+
+  程式碼在哪裡
+
+  服務端（主機上，mask2former_env）：
+
+  ┌──────────────────────────────────────┬──────────────────────────────────────────────────────┐
+  │                 位置                 │                        做什麼                        │
+  ├──────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ training_data/tools/m2f_server.py:38 │ 收到影像的處理函式                                   │
+  ├──────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ training_data/tools/m2f_server.py:43 │ 呼叫 Mask2Former 推論                                │
+  ├──────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ training_data/tools/m2f_server.py:44 │ 類別換成顏色後回傳                                   │
+  ├──────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ training_data/tools/m2f_test.py:56   │ segment()，實際跑模型的函式                          │
+  ├──────────────────────────────────────┼──────────────────────────────────────────────────────┤
+  │ training_data/tools/m2f_test.py:43   │ build_class_table()，把 COCO 類別對到 ViPlanner 類別 │
+  └──────────────────────────────────────┴──────────────────────────────────────────────────────┘
+
+  類別對照表本身在 ViPlanner 原始專案的 viplanner_core/viplanner/config/coco_sem_meta.py，顏色定義在同一個資料夾的
+  viplanner_sem_meta.py。
+
+  控制迴圈端（容器裡），都在 isaac_sim_bridge/viplanner_control.py：
+
+  ┌───────────────────────────┬────────────────────────────────────────────────────────────────┐
+  │           位置            │                             做什麼                             │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:708  │ 讀 VIPLANNER_M2F 開關                                          │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:712  │ _m2f_segment()，取彩色影像、送出、收回顏色圖                   │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:1726 │ 用 Mask2Former 的結果取代語意圖 sem                            │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:1764 │ sem 轉成張量                                                   │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:2377 │ vip.plan_dual(depth_t, sem_t, ...)，深度和語意一起進 ViPlanner │
+  ├───────────────────────────┼────────────────────────────────────────────────────────────────┤
+  │ viplanner_control.py:2359 │ 同一張 sem 也給找樓梯的模組用（stair_perception.py）           │
+  └───────────────────────────┴────────────────────────────────────────────────────────────────┘
+
+  開關是 run_stair_usd.sh 裡的 M2F=1，它會設定容器的環境變數 VIPLANNER_M2F。
+
+  怎麼啟動
+
+  要先開服務，再開模擬：
+
+  # 1. 主機上開 Mask2Former 服務（目前已經在背景跑）
+  cd /home/itri/Desktop/viplanner2/training_data/tools
+  conda run -n mask2former_env python m2f_server.py
+
+  # 2. 開模擬
+  cd /home/itri/isaac-sim-docker
+  ROBOT=growin M2F=1 GUIDANCE=perception ./run_stair_usd.sh
+
+  如果服務沒開或某一幀失敗，那一幀會自動退回標準答案語意，log 會印 WARNING: m2f request 
+  failed。所以看到這個警告時，代表當下不是真的在用 Mask2Former。
+
+  實機上的對應
+
+  實機沒有容器的限制，但這個「獨立服務」的架構可以原樣搬過去：相機影像送給 Mask2Former 的節點，節點發布語意圖，ViPlanner
+  的節點訂閱。只是傳輸方式會從 HTTP 換成 ROS topic，ViPlanner 原作者的實機版本就是這樣做的。
+
+
+
+結論統整，目前mask2former接上，取代完美語意，但是劃分的不太清楚，目前廣營狗有5台相機
+● 兩種模式下 ViPlanner 的規劃頻率幾乎一樣：完美語意約 1.24 次/秒，Mask2Former 約 1.17 次/秒（都是真實時間）。
+
+  怎麼量的： 兩種模式用同樣的設定各跑一段比較：growin、下樓、物理 500 Hz、腿部里程計高度、5 台相機，都取前 8
+  段統計。ViPlanner 不是每一幀都規劃，而是每 8 個控制步規劃一次。
+
+  ┌──────────────────────────────────┬───────────────────┬────────────────────────────┐
+  │                                  │ 完美語意（M2F=0）   │    Mask2Former（M2F=1）          │
+  ├──────────────────────────────────┼───────────────────┼────────────────────────────┤
+  │ 平均每幀                          │ 101 ms（9.9 fps） │ 107 ms（9.3 fps）                       │
+  ├──────────────────────────────────┼───────────────────┼────────────────────────────┤
+  │ 規劃那一幀（p95）                                      │ 538 ms            │ 516 ms                     │
+  ├──────────────────────────────────┼───────────────────┼────────────────────────────┤
+  │ ViPlanner 規劃頻率（真實時間）         │ 約 1.24 次/秒      │ 約 1.17 次/秒              │
+  ├──────────────────────────────────┼───────────────────┼────────────────────────────┤
+  │ ViPlanner 規劃頻率（模擬時間）          │ 7.5 Hz            │ 7.5 Hz                     │
+  ├──────────────────────────────────┼───────────────────┼────────────────────────────┤
+  │ Mask2Former 一張圖（送出到收回）     │ —                 │ 平均 33 ms，7000 張 0 失敗  │
+  └──────────────────────────────────┴───────────────────┴────────────────────────────┘
+
+  - 差距小的原因： 慢的不是語意，而是模擬本身。500 Hz 物理加上 5 台相機的渲染，以及規劃那一幀的感知和地圖更新，就要約 0.5
+    秒。Mask2Former 每次規劃多花約 33 ms；爬樓梯時 4 台額外相機每隔一次規劃也要送，平均每幀只多 6 ms 左右。
+  - 在樓梯上： 我還看到 Mask2Former 模式在樓梯上會掉到 6.8～7.8 fps，因為 4 台額外相機都要送
+    Mask2Former。但完美語意那輪沒有取同一段樓梯來比，所以這個差距沒有直接對照過。
+  - 模擬時間： 兩種都是每 8 步規劃一次，等於 8/60 秒，所以都是 7.5 Hz。
+
+  Mask2Former 模型：
+  - 名稱：facebook/mask2former-swin-large-coco-panoptic（Hugging Face transformers）
+  - 骨幹 Swin-Large，用的是 COCO 全景分割的現成權重，沒有用我們自己的資料訓練過。
+  - 服務程式在 training_data/tools/m2f_server.py（--model 可以換模型），用 conda 環境 mask2former_env，在本機 127.0.0.1:8765
+    提供服務。
+  - 之前離線測 growin 的模擬畫面：樓梯認成樓梯 87%、地板認成可走 59%、牆認成障礙 92%。
+
+
+● 模擬跑得比現實慢，模擬世界的 1 秒，實際要花大約 6 秒。所以每個環節有兩種頻率：
+  - 模擬時間：狗自己感受到的速度，放到實機上就是這個速度。
+  - 真實時間：你現在在螢幕上看到的速度。
+
+  整條流程（從上到下）：
+
+  ① 相機拍照（深度圖 + 彩色圖）
+          ↓
+  ② Mask2Former：彩色圖 → 語意圖（哪裡是樓梯、地板、牆…）
+     （模擬把圖透過網路送給本機上的 Mask2Former 服務，它算完再傳回來）
+          ↓
+  ③ 樓梯地圖：語意圖 + 深度圖 → 樓梯在哪裡、下一段要走哪一段
+          ↓
+  ④ ViPlanner：深度圖 + 語意圖 + 目標點 → 規劃路線，輸出「走多快、往哪轉」
+          ↓
+  ⑤ 步態策略：「走多快、往哪轉」→ 12 個關節各要轉到什麼角度
+          ↓
+  ⑥ 物理引擎：驅動腿，算出狗實際怎麼移動
+
+  ⑦ 腿部里程計（旁支）：關節角度 + IMU + 關節力矩 → 狗現在多高
+     → 回傳給 ③，用來判斷還要不要繼續上樓或下樓
+
+  每個環節多久跑一次：
+
+  ┌─────────────────────────────────────────────────┬───────────────┬──────────────────┐
+  │                      環節                       │   模擬時間     │ 真實時間（現在）   │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ⑥ 物理引擎                                      │ 每秒 500 次   │ —                │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ⑤ 步態策略                                      │ 每秒 60 次    │ 每秒約 9～10 次  │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ⑦ 腿部里程計                                    │ 每秒 60 次    │ 每秒約 9～10 次  │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ① 前方相機拍照                                  │ 每秒 7.5 次   │ 每秒約 1.2 次    │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ② Mask2Former（前方相機）                                                   │ 每秒 7.5 次    │ 每秒約 1.2 次    │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ③ 樓梯地圖                                      │ 每秒 7.5 次   │ 每秒約 1.2 次    │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ ④ ViPlanner 規劃路線                            │ 每秒 7.5 次   │ 每秒約 1.2 次    │
+  ├─────────────────────────────────────────────────┼───────────────┼──────────────────┤
+  │ 另外 4 台相機（只用來找樓梯，只在要上下樓時開）        │ 每秒約 3.7 次 │ 每秒約 0.6 次     │
+  └─────────────────────────────────────────────────┴───────────────┴──────────────────┘
+
+  重點：
+  - ①②③④ 是綁在一起的：步態每走 8 步，就依序拍一次照、跑一次 Mask2Former、更新一次地圖、規劃一次路線。
+  - ⑤和⑦每一步都跑。兩次規劃之間，步態策略會一直照著上一次的指令走。
+  - Mask2Former 處理一張圖只要約 0.03 秒，不是慢的原因。真實時間這麼慢，主要是 5 台相機的畫面渲染和每秒 500
+    次的物理計算很吃資源。
+
+
+關於腳步里程
+  ---
+
+  一、樓梯地圖的水平位置改用里程計，會影響什麼
+
+  先講前提：現在的里程計只估高度
+
+  leg_odometry.py 目前只估高度。水平位置 (x, y) 和朝向角 (yaw)
+  都還沒有估。要改，得先把里程計擴充成也估水平位置和朝向，不是換一個變數就好。
+
+  現在規劃流程裡還在用模擬器真值的地方
+
+  ┌────────────────────────────┬──────────────────────────────────────────────────────────┬──────────────────┐
+  │            用途            │                         程式位置                         │    用到的真值    │
+  ├────────────────────────────┼──────────────────────────────────────────────────────────┼──────────────────┤
+  │ 把樓梯像素轉成 3D 點       │ semantic_color_image_with_points（1834 行）              │ 相機的位置和朝向 │
+  ├────────────────────────────┼──────────────────────────────────────────────────────────┼──────────────────┤
+  │ 傳給樓梯地圖的狗位置與朝向 │ _stair_seeker.update(..., base_pos[:2], yaw)（2584 行）  │ 機身 x, y, yaw   │
+  ├────────────────────────────┼──────────────────────────────────────────────────────────┼──────────────────┤
+  │ 算「往子目標要轉多少度」   │ 2624–2628 行                                             │ 機身位置與姿態   │
+  ├────────────────────────────┼──────────────────────────────────────────────────────────┼──────────────────┤
+  │ 把最終目標換到機器狗座標   │ goal_transformer(goal, cam_pos_t, cam_quat_t)（2605 行） │ 相機位姿         │
+  └────────────────────────────┴──────────────────────────────────────────────────────────┴──────────────────┘
+
+  改了之後不受影響的
+
+  - ViPlanner 本身：它吃的是相機座標下的深度圖和語意圖，跟世界座標無關。
+  - 短時間內的判斷：上面這些全部換成同一個里程計座標以後，彼此還是一致的。狗看到 3 m 外的樓梯、10
+    秒後走到，這中間累積的誤差只有幾公分，「對準入口、沿中線走」照樣可行。所以程式開頭就寫「world
+    在實機上就是里程計座標」，演算法本身不用改。
+
+  會受影響的（誤差隨時間和距離累積）
+
+  1. 最終目標會偏。 目標是用出發點座標給的，狗到達時的位置誤差等於全程累積的漂移。腿式里程計在平地上一般漂走過距離的幾 %，走
+     30 m 大約偏幾十公分到 1 m。這是一般原則，我們還沒有在這台狗上量過。
+  2. 朝向漂移會讓遠處的東西轉歪。 yaw 偏 1°，6 m 外只偏 10 cm，影響不大。但 yaw
+     是陀螺儀積分出來的，加上轉彎時腳會打滑，幾分鐘下來可能偏好幾度。
+  3. 同一段樓梯可能被記成兩段。 地圖靠「位置相近」判斷是不是同一段（中線差 0.7 m、高度差 0.3 m
+     內）。如果隔一段時間再看到同一段樓梯，期間漂移超過這些門檻，就會被當成新的一段，而且標記成「還沒走過」。
+     - 好在已經有兩道保護：
+       - 選樓梯段時，入口要在腳的高度，而且要往目標方向延伸 1.5 m（下樓是 0.6 m）以上。剛走完、已經在腳下的那段不會被選中。
+       - 俯仰角守衛：機身朝錯的方向傾斜就回頭。
+     - 所以「走回頭」的風險不大，但地圖裡會多出一些雜段。
+  4. 樓梯長度會被拉長。
+     地圖裡樓梯段的頭尾範圍只會擴大、不會縮小。有漂移時，同一段在不同時間看到的位置不同，頭尾會被拉長，可能導致「走過終點 0.3
+     m 才算走完」很難達成。不過還有另一個判斷能接住：機身放平而且前面是牆，也算走完。
+  5. 樓梯正是腿式里程計最差的地方。 高度在上樓時已經系統性少算約
+     6%，推測是球形腳在階緣滾動。水平方向在樓梯上應該也會有同等級的誤差，但這是推測，還沒量過。
+
+  實機的一般做法和我的建議
+
+  實機上，水平位置和朝向通常不只靠腿，會用視覺慣性里程計或光達 SLAM，再融合腿式里程計。很多機器狗內建的里程計就是這樣。
+
+  我的建議：
+  1. 先把里程計擴充成也估水平位置，用同樣的「著地腳不動」原理，朝向用 IMU。
+  2. 規劃全部改用里程計位姿。
+  3. 跑一次上樓、一次下樓，量漂移有多大、會不會失敗。
+
+  這會改到 leg_odometry.py 和主程式好幾處，要做的話跟我說一聲。
+
+  ---
+
+  二、腿部里程計完整說明
+
+  1. 目的與輸入
+
+  只用實機上本來就有的感測器，估出機身現在多高。完全不用模擬器的世界位姿。
+
+  ┌──────────────────────────────┬─────────────────────┬───────────────────────────────────────────┐
+  │             輸入             │    實機上的來源     │             現在模擬中的來源              │
+  ├──────────────────────────────┼─────────────────────┼───────────────────────────────────────────┤
+  │ 12 個關節角度                │ 馬達編碼器          │ dof_pos                                   │
+  ├──────────────────────────────┼─────────────────────┼───────────────────────────────────────────┤
+  │ 腿的幾何（連桿長度、關節軸） │ 機器狗自己的 URDF   │ growin.urdf                               │
+  ├──────────────────────────────┼─────────────────────┼───────────────────────────────────────────┤
+  │ 重力方向（機身座標下）       │ IMU 的姿態          │ 真實機身姿態換算（1578 行）               │
+  ├──────────────────────────────┼─────────────────────┼───────────────────────────────────────────┤
+  │ 垂直加速度                   │ IMU 加速度計        │ ⚠️  真實機身高度的二次差分（1581–1582 行） │
+  ├──────────────────────────────┼─────────────────────┼───────────────────────────────────────────┤
+  │ 關節力矩                     │ 馬達電流 × 力矩常數 │ 物理引擎回報的力矩 dof_effort             │
+  └──────────────────────────────┴─────────────────────┴───────────────────────────────────────────┘
+
+  ⚠️  要特別說明：模擬中的「IMU
+  加速度」是用真實高度算出來的，沒有雜訊也沒有偏差，所以線上的結果偏樂觀。離線測試時有加雜訊和偏差（結果見第 6
+  節）。上實機時這一項一定要換成真的加速度計。
+
+  2. 核心原理
+
+  ▎ 著地的腳在世界中不會動。
+
+  所以只要某隻腳穩穩踩著，它和機身之間的高度差有變化，就只可能是機身在動：
+
+  機身垂直速度 = −（腳相對機身的高度變化）/ 時間
+
+  例：腳原本在機身下方 0.45 m，下一步變成 0.44 m，表示腳相對機身上升了 1 cm。腳沒動，所以是機身下降了 1 cm。
+
+  光靠這個積分會有兩個問題：哪隻腳真的踩穩不好判斷，而且四腳都騰空時沒有資料。所以再用 IMU 加速度一起做卡爾曼濾波：
+  - IMU 負責預測高度，騰空時靠它撐過去。
+  - 腳負責校正，防止 IMU 積分越漂越遠。
+
+  3. 程式結構
+
+  leg_odometry.py 分三部分。
+
+  (A) LegKinematics：關節角度 → 腳在機身座標的位置（正向運動學）
+
+  for xyz, R_o, axis in chain:        # hip → thigh → calf → foot
+      p = p + R @ xyz                  # 沿目前方向移動一段連桿
+      R = R @ R_o                      # 關節安裝角度
+      if axis is not None:
+          R = R @ _axis_angle(axis, 關節角)   # 再轉這個關節的角度
+
+  - 每隻腳的運動鏈（hip → thigh → calf → foot）直接從 URDF 讀出（第 47–60 行）。不寫死連桿長度，所以換狗只要換 URDF。
+  - 舊版是照 Go2 的尺寸寫死的，在 growin 上算反了：實際爬升 +8.6 m，舊版算成 −10.6 m。
+  - jacobians()（第 76–85 行）用數值微分算「關節角度變一點，腳位置變多少」，給下一部分算力用。
+
+  (B) foot_up_forces：關節力矩 → 每隻腳被地面推多大力
+
+  原理是靜力平衡：腳被地面推的力 F，會在各關節產生力矩，由馬達抵銷：
+
+  τ = −Jᵀ F    →    F = −(Jᵀ)⁻¹ τ
+
+  程式第 98 行解出 F，第 101 行只取「往上」的分量。用力的大小判斷這隻腳有沒有在承重。
+
+  為什麼不用模擬器的腳部接觸感測器：在 growin 上它約 30%
+  的時間回報「沒有腳著地」，會造成好幾公尺的誤差。用力矩判斷在實機上也做得到（讀馬達電流就好）。
+
+  (C) LegHeightOdometry.update()：卡爾曼濾波，每個控制步執行一次
+
+  狀態：x = [機身高度, 垂直速度]
+
+  ① 算每隻腳的相對高度（沿重力方向）（第 146 行）
+
+  h = -(self.kin.feet(dof_pos) @ g)
+
+  這裡沿重力方向算，不是沿機身 z 軸。在樓梯上機身會傾斜約 30°，沿機身 z 軸算會把前後方向的移動誤算成高度變化。
+
+  ② 預測：用 IMU 加速度（第 150–151 行）
+
+  高度 ← 高度 + 速度·dt + ½·加速度·dt²
+  速度 ← 速度 + 加速度·dt
+
+  不確定度 P 依 acc_std=5 增加。
+
+  ③ 挑出可用的腳，要同時滿足兩個條件（第 154–156 行）：
+  - 有承重：這一步和上一步受力都 > 200 N。growin 61 kg，總重約 600 N，對角步態時兩隻腳各撐約 300 N。
+  - 真的不動：用這隻腳算出的機身速度，跟預測的速度差不到 0.2 m/s。
+
+  第二個條件是修下樓問題時加的：
+  - 上樓時，正要蹬離的那隻腳還在受力，但已經在往上抬。
+  - 下樓時，剛落地的那隻腳還在往下沉。
+
+  這兩種腳都「受力但在動」。原本四隻腳共用一個判斷，會讓它們混進來，結果下完一段樓梯，高度就高估了 1 m。
+
+  ④ 校正（第 163–169 行）
+
+  取可用腳的速度中位數當量測值，用卡爾曼增益把預測拉過去。用的腳越多，量測越可信（vel_std² / 腳數）。
+
+  ⑤ 恢復機制（第 157–162 行）
+
+  如果連續 15 步都是「有腳受力，但沒有一隻通過靜止檢查」，代表是預測本身已經偏了，不是腳有問題。這時直接採用受力腳的中位數，
+  把估計拉回來。
+
+  4. 在主程式裡怎麼接（viplanner_control.py:1567–1590）
+
+  每個控制步（模擬 60 次/秒）：
+    讀 12 個關節角度、12 個關節力矩
+    算機身座標下的重力方向（IMU 姿態）
+    算垂直加速度（模擬中：真實高度二次差分；實機：加速度計扣重力）
+    _leg_odom.update(...)  →  base_z
+             ↓
+    腳高 = base_z − 0.30  →  給樓梯地圖、「是否已到同一層」的判斷
+    樓梯 3D 點的高度也一起平移，讓地圖和腳高在同一個座標系
+
+  起點的高度設為里程計原點（第 1573 行）。
+
+  5. 為什麼物理要開到 500 Hz
+
+  在預設 60 Hz 下，模擬器回報的關節力矩很粗糙，腳受力判斷亂掉，同一個演算法會漂好幾公尺。改成 500
+  Hz（PHYSICS_HZ=500）後才正常。這是模擬器的問題；實機的馬達電流本來就是高頻讀取。
+
+  6. 目前的準確度
+
+  ┌──────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────────┐
+  │                         測試                         │                             結果                              │
+  ├──────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 離線（500 Hz 錄檔，加速度加 0.5 m/s² 雜訊與 ±0.1     │ 下樓 2.3 m 誤差 −0.2 m；上樓 3 m 誤差 −0.16 m；上樓 9.2 m     │
+  │ m/s² 偏差）                                          │ 誤差 −0.6 m                                                   │
+  ├──────────────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 線上（模擬加速度沒有雜訊）                           │ 上樓到 3F、下樓到 1F 都成功；上樓系統性少算約                 │
+  │                                                      │ 6%，五份錄檔最壞約 0.58 m                                     │
+  └──────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────────┘
+
+  因為有這 6% 的誤差，主程式判斷「到同一層了沒」的門檻會隨爬升距離放寬：0.8 m + 爬升距離的 10%。
+
+  7. 上實機要做的事
+
+  1. 垂直加速度換成真的加速度計：用 IMU 姿態把讀值轉到世界座標，再扣掉重力。
+  2. 力矩：馬達電流 × 力矩常數 × 減速比，並注意齒輪摩擦。200 N 的受力門檻可能要重新調。
+  3. URDF：要和實機的尺寸一致。
+  4. 6% 少算的問題還沒解，原因（球形腳在階緣滾動）是推測，還沒證實。實機的腳形不同，結果可能也不同。
+
+leg_odometry.py跟viplanner又是怎麼接的？
+● 結論：里程計沒有直接接到 ViPlanner
+
+  ViPlanner 的網路只吃三樣東西：深度圖、語意圖、目標點（換到機器狗座標下）。里程計算出的高度不會直接餵給網路，而是間接透過「
+  目標點要給哪一個」來影響 ViPlanner。
+
+  接法示意
+
+  leg_odometry.py                     viplanner_control.py
+  ───────────────                     ─────────────────────────────────────────
+  LegHeightOdometry.update()
+     每個控制步（模擬 60 次/秒）
+          │
+          ▼
+     base_z（估計的機身高度）
+          │
+          ▼
+     腳高 _feet_z = base_z − 0.30          （2508 行）
+          │
+          ├─▶ ① 判斷要不要找樓梯             （2529–2533 行）
+          │      |目標高度 − 腳高| > 門檻？
+          │        否 → 子目標 = 最終目標
+          │        是 → 進入找樓梯模式，並決定上樓或下樓
+          │
+          ├─▶ ② 樓梯 3D 點的高度平移          （2582 行）
+          │      點的高度 += (base_z − 真實高度)
+          │
+          └─▶ ③ 樓梯地圖 StairMap.update(..., feet_z)  （2584 行）
+                 • 哪段樓梯的入口在腳的高度
+                 • 這段樓梯是否往目標方向延伸夠遠
+                 • 爬樓梯時高度有沒有變錯方向
+                       │
+                       ▼
+                 子目標 (x, y)
+                       │
+                       ▼
+     planning_goal ──▶ goal_transformer ──▶ ViPlanner 網路 ──▶ 路線、恐懼值
+                       （用相機位姿把目標                      │
+                         換到機器狗座標）                    ▼
+                                                      轉向角、前進速度
+                                                                                                                      （找樓梯時，轉向改用
+                                                      幾何直接算向子目標）
+
+  三個接點，詳細說明
+
+  ① 決定「現在要不要找樓梯」（viplanner_control.py:2529-2533）
+
+  _gap_tol = 0.8 + 0.10 * 已爬升距離     # 用里程計時才加後面那項
+  if abs(目標高度 - 腳高) > _gap_tol:
+      _percep_descend = 目標比腳低          # 上樓還是下樓
+  _percep_climbing = abs(目標高度 - 腳高) > _gap_tol 或（還在樓梯上、機身還沒放平）
+
+  - 不在找樓梯：ViPlanner 直接朝最終目標規劃，里程計完全不參與。
+  - 在找樓梯：改由樓梯地圖決定子目標。
+
+  這裡是里程計影響最大的地方。之前上到 3F 時，里程計還少算 0.88 m，狗誤以為「還沒到 3F」，就在 3F
+  繼續找樓梯，最後走出場景邊緣。門檻加上「爬升距離的 10%」就是為了修這個。
+
+  ② 把地圖點和腳高放在同一個座標系（2582 行）
+
+  樓梯的 3D 點是用真實相機位姿算出來的，腳高卻用里程計算。如果兩者混用，里程計偏 1 m 時，下一段樓梯看起來就會「不在腳的高度」
+  ，選不到。所以把所有點的高度一起平移里程計的誤差量。實機上兩者本來就都掛在里程計座標下，不需要這一步。
+
+  ③ 樓梯地圖裡用到腳高的地方（stair_map.py）
+
+  ┌──────────────────────────────────────────────┬───────────────────────────┐
+  │                     用途                     │           位置            │
+  ├──────────────────────────────────────────────┼───────────────────────────┤
+  │ 只保留腳高上下 3 m 內的樓梯點                │ detect_flights（136 行）  │
+  ├──────────────────────────────────────────────┼───────────────────────────┤
+  │ 選樓梯段：入口在腳的高度、往目標方向延伸夠遠 │ _candidates（262–265 行） │
+  ├──────────────────────────────────────────────┼───────────────────────────┤
+  │ 入口位置 = 斜面上和腳同高的地方              │ frame(entry_z)            │
+  ├──────────────────────────────────────────────┼───────────────────────────┤
+  │ 爬樓梯時高度反方向變化 0.3 m → 放棄這段      │ update（319–320 行）      │
+  └──────────────────────────────────────────────┴───────────────────────────┘
+
+  哪些地方沒用到里程計（還在用真值）
+
+  ┌────────────────────────────┬──────────────────────────────────────────────┬──────────────────────────────────────────┐
+  │            項目            │                     位置                     │                  用的是                  │
+  ├────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ 子目標的高度               │ 2588 行 planning_goal = [x, y, base_pos[2]]  │ 真實機身高度                             │
+  ├────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ 把目標換到機器狗座標       │ goal_transformer(..., cam_pos_t, cam_quat_t) │ 真實相機位姿                             │
+  ├────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ 找樓梯時算轉向角           │ 2624–2628 行                                 │ 真實機身位置與姿態                       │
+  ├────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ 傳給樓梯地圖的狗位置與朝向 │ update(..., base_pos[:2], yaw)               │ 真值                                     │
+  ├────────────────────────────┼──────────────────────────────────────────────┼──────────────────────────────────────────┤
+  │ 俯仰角（判斷是否走錯方向） │ pitch_up                                     │ 真實姿態，相當於實機 IMU，這項本來就合理 │
+  └────────────────────────────┴──────────────────────────────────────────────┴──────────────────────────────────────────┘
+
+  子目標的高度用真值，影響很小：子目標設成和機身一樣高，ViPlanner
+  實際上只看它的水平方向。要完全不用真值，就是上一則說的「水平位置也改用里程計」，到時候這張表裡前四項都要一起換掉。
+
+  一句話總結
+
+  里程計 → 腳高 → ①決定要不要找樓梯 ＋ ③樓梯地圖選哪段、往哪走 → 子目標 → ViPlanner 朝子目標規劃。 ViPlanner
+  網路本身不知道里程計的存在。
+
+
+  多相機是怎麼接的
+
+  你說得對，ViPlanner 只吃一張深度圖加一張語意圖，也就是前方主相機拍到的。另外 4 台相機完全不會送進
+
+  ┌──────────────┬──────────────────────┬──────────────────────────────────────────┐
+  │     相機     │      位置與朝向      │                   用途                   │
+  ├──────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ 前方主相機   │ 機頭                 │ ViPlanner 的輸入，也提供樓梯點給樓梯地圖 │
+  ├──────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ front_bottom │ 機頭下方，往下斜 45° │ 只用來找樓梯                             │
+  ├──────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ left_bottom  │ 機身左側，往下斜 45° │ 只用來找樓梯                             │
+  ├──────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ right_bottom │ 機身右側，往下斜 45° │ 只用來找樓梯                             │
+  ├──────────────┼──────────────────────┼──────────────────────────────────────────┤
+  │ rear         │ 機尾，朝後           │ 只用來找樓梯                             │
+  └──────────────┴──────────────────────┴──────────────────────────────────────────┘
+
+  串接方式：不是把圖片拼在一起，而是在 3D 點這一層合併（viplanner_control.py 約 2565–2610 行）：
+
+  另外 4 台相機（只在上下樓模式，每 2 次規劃跑 1 次）
+    每台：深度圖 + 彩色圖 → Mask2Former → 語意圖
+          → 用該相機的位置與朝向，把每個像素換成世界座標 3D 點
+          → 解析度減半（點太多會拖慢）
+                      │
+  前方主相機的語意圖 + 3D 點 ─┤
+                      ▼
+          全部 3D 點接成一大串 → 樓梯地圖（只看「樓梯」顏色的點）
+                      ▼
+                  子目標 (x, y)
+                      ▼
+  ViPlanner ← 只吃前方主相機的深度圖 + 語意圖 + 子目標
+
+  - 為什麼要加這 4 台：在平台上要 U 型迴轉時，下一段樓梯在狗的側邊或後面，前方相機看不到。側面和後面的相機能先
+    把它記進地圖，狗就知道要往哪裡轉。
+  - 為什麼不給 ViPlanner：ViPlanner 的網路是用單一前方相機訓練的，輸入格式固定，沒辦法多吃幾張圖。
+  - 在 rviz 看：這 4 台的語意圖拼成 2×2 的一張，發布在 /go2/semantic_extra。
+
+
+
+
+新架構
+Prompt List ──(啟動一次)──► Text Encoder ──► Text Features ×N
+                                                │
+RGB frame ──► Vision Encoder（每幀一次）──► Shared Vision Features
+                                                │
+                                                ▼
+                              Fusion + Decoder (batched ×N)
+                                                │
+                                                ▼
+                                    semantic_seg logits ×N
+                                  (+ presence score gating)
+                                                │
+                                                ▼
+                         resize logits → sigmoid / argmax + bg threshold
+                                                │
+                                                ▼
+                     Semantic Composition（overlap / priority / unknown）
+                                                │
+ROS param / service ──► Traversability Policy ──► class → ViPlanner 30 色
+                                                │
+                                                ▼
+Depth image（對齊 RGB）────────────────────► ViPlanner ◄── Goal
+                                                │
+                                                ▼
+                                           Local Path
+                                           
+● 先跟你說一下我剛才在做什麼：我看了現有的 Mask2Former 接法，也查了能不能裝 SAM3。結論是換起來不難，但動手前有
+  幾件事要你決定。另外你的訊息好像停在「架構長」就斷了，後面如果還有要求請補上。
+
+  現況
+
+  - 控制迴圈（isaac_sim_bridge/viplanner_control.py:816 的 _m2f_segment）只做一件事：把 RGB 用 POST 傳到
+    127.0.0.1:8765/seg，拿回一張已經是 ViPlanner 顏色的語意圖。主畫面、延遲幀、額外相機、stair_map 都走這條。
+  - 所以 SAM3 server 只要沿用同一個 HTTP 格式，控制迴圈幾乎不用改。可以新增
+    training_data/tools/sam3_server.py，再把開關（例如 SEG=sam3）或 URL 指過去就好，Mask2Former
+    那套保留當對照組。
+  - stair_map.py 認的是樓梯顏色 (0,153,0)，只要 Traversability Policy 把樓梯對到這個顏色就不受影響。
+
+  照你的架構圖規劃的 sam3_server.py
+
+  1. 啟動時把 prompt list 跑一次 text encoder，把文字特徵存起來。
+  2. 每幀跑一次 vision encoder，N 個 prompt 共用這份影像特徵，fusion + decoder 一次批次跑完 N 個。
+  3. 每個 prompt 取 SAM3 的 semantic_seg 輸出，再乘上 presence score，讓畫面中不存在的類別被壓掉。
+  4. 縮放到原圖大小，先做 sigmoid，再取 argmax；最高分低於門檻的像素算背景。
+  5. 語意合成：重疊時依優先序決定（例如欄杆優先於樓梯，可以順便改善 M2F
+     把欄杆認成樓梯的問題）；沒有任何類別的像素標成 unknown，當障礙。
+  6. Traversability Policy 把類別對應到 ViPlanner 的 30 色。
+
+  需要你決定的事
+
+  1. 環境：SAM3 需要 transformers 5.x，現在的 mask2former_env 是 4.57.6。我建議另開一個 sam3_env（torch cu128 +
+     transformers 5.x），不動 mask2former_env。可以嗎？
+  2. 權重授權：facebook/sam3 是 gated repo，本機目前沒有 HF token。要請你先到 HF 頁面申請存取，再執行 ! 
+     huggingface-cli login。
+  3. Prompt list 和對應：我的初版提案如下，請增刪：
+     - floor → floor
+     - stairs → stairs
+     - wall → wall（障礙）
+     - railing → railing（障礙）
+     - door → 障礙
+     - furniture / table / chair → 障礙
+     - person → 障礙
+     - 背景 / unknown → 障礙
+
+     重疊時的優先序：railing > stairs > wall > floor。
+  4. Traversability Policy 放哪：server 跑在主機的 conda 環境，不在 ROS 裡。可以選：
+     - (a) server 多開一個 HTTP endpoint 來改 policy，容器內再包一個 ROS service 轉呼叫
+     - (b) server 自己起 rclpy node，直接收 ROS param / service（主機要有 ROS 2）
+     - (c) 先用 YAML 設定檔加啟動參數，之後再接 ROS
+
+     我建議先做 (c)，同時把 (a) 的 endpoint 留好。
+  5. 速度要有心理準備：SAM3 約 8.5 億參數，輸入是 1008×1008，加上 N 個 prompt 的 decoder，在 5090 上估計會比
+     M2F 的 33 ms 慢不少，實際多少要量過才知道。如果太慢，可以降低輸入解析度、用 FP16/BF16，或每 2
+     次規劃才分割一次。
+
+  你確認第 1、3、4 點、完成第 2 點之後，我就建環境，先離線比對 growin_rgb_test/（跟 M2F
+  用同一套統計，看樓梯、地板、牆各認對幾成），再接進控制迴圈。
+
+
+整體規劃很合理，沿用 HTTP 介面、保留 M2F 當對照組都是對的做法。不過管線本身有兩個邏輯衝突，建議先改再動工。
+
+先要改的：步驟 3–5 的順序和邏輯
+
+1. presence 不能直接乘在 logits 上
+步驟 3 先乘 presence，步驟 4 才做 sigmoid，這樣是把 logit 和分數相乘，結果沒有意義。應該兩邊都先轉成機率再相乘：
+
+resize(seg_logits) → sigmoid → × sigmoid(presence_logit) → 合成
+
+2. argmax 和優先序不能同時用
+做完 argmax 之後，每個像素只剩一個類別，已經沒有「重疊」可言，所以步驟 5 的優先序根本不會發揮作用。可是 railing > stairs 正是要靠優先序來修 M2F 的問題。建議改成：
+
+每個類別各自設門檻（例如 railing 0.4、stairs 0.5），得到各自的 binary mask。
+依優先序由低往高覆蓋上去（floor → wall → stairs → railing）。
+沒被任何 mask 蓋到的像素算 unknown。
+
+這樣每個類別的門檻可以單獨調，比全域一個背景門檻好控制。
+
+3. 先確認 HF 版本真的有共用 vision features
+Sam3Processor 一次傳多個 text prompt 時，有可能每個 prompt 都重跑一次 vision encoder。建議先確認兩件事：
+
+是否能先算一次 vision embeds，再傳進去給 N 個 prompt 共用。
+output 裡是否真的有 semantic_seg 欄位。
+
+量速度時把 vision encoder 和 decoder ×N 分開計時，否則架構圖上「每幀只跑一次」可能不成立。
+
+你列的決定事項
+
+1. 環境：同意另開 sam3_env。 反正是透過 HTTP 隔開，兩個環境互不影響。
+
+2. 權重： 這需要你本人去 HF 頁面申請。登入後 token 存在本機 cache 就好，不要寫進程式碼或 commit 進 repo。
+
+3. Prompt list：建議再補幾項
+
+ceiling：沒列的話天花板會落進 unknown，變成障礙。雖然投影後高度可能讓它影響不大，但明確標出來比較乾淨。
+carpet / rug / floor mat：這是最大的風險。地墊如果沒被認成 floor，就會變成 unknown，也就是障礙，ViPlanner 會繞開本來可以走的地面。
+樓梯同義詞：SAM3 對措辭滿敏感的，建議離線時比較 stairs、staircase、steps，或直接取聯集。
+優先序要把所有障礙類都排進去：目前 person、furniture、door 沒有位置。建議： railing > person > stairs > furniture/door > wall > floor 原則是障礙優先於可走區域，比較安全。
+
+另外，unknown 直接當障礙可以先這樣做，但離線評估時要統計 unknown 佔地面區域的比例。如果偏高，代表 prompt list 還有缺漏，而不是該把門檻調低。
+
+4. Policy 位置：同意先做 (c)、預留 (a)。 有兩個小提醒：
+
+熱切換時用「整份 policy 物件原子替換」，避免處理一幀到一半時 policy 被改掉。
+HTTP response 加一個 X-Policy-Version header，事後看 log 才知道每幀用的是哪一版 policy。
+
+5. 速度： 有兩點要特別注意：
+
+控制迴圈會打好幾次 /seg：主畫面、延遲幀、額外相機各一次。SAM3 的成本是 M2F 的數倍，總延遲會被放大。延遲幀如果是過去某一幀，可以直接重用快取結果，不要重算。
+降解析度要小心：SAM3 的 position embedding 是針對 1008 設計的，降解析度可能要內插，掉點也可能比預期多。建議先試 BF16 和 torch.compile，降解析度放最後。
+離線評估建議多看的指標
+
+除了沿用 M2F 那套統計，再加這幾項：
+
+railing 被誤判成 stairs 的 confusion，這是這次換模型的主要動機之一。
+unknown 落在地面上的比例。
+延遲的 p50 / p95，以及 vision 和 decoder 各自的耗時。
+
+這些確認後就可以讓它開始建環境了。

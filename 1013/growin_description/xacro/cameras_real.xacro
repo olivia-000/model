@@ -1,0 +1,186 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 讀取 ROS 版本參數 -->
+  <xacro:property name="ros_version" value="$(optenv ROS_VERSION 2)" />
+
+  <!-- 定義深度相機巨集 -->
+  <xacro:macro name="depth_camera" params="name parent xyz rpy width height fov min_depth max_depth">
+    <!-- 相機物理外殼 -->
+    <link name="${name}_link">
+      <!-- <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.02 0.09 0.02"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual> -->
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${xyz}" rpy="${rpy}"/>
+    </joint>
+
+    <!-- 光學座標系 (供 ROS 2 影像與點雲對齊轉換使用) -->
+    <link name="${name}_optical_frame"/>
+    <joint name="${name}_optical_joint" type="fixed">
+      <parent link="${name}_link"/>
+      <child link="${name}_optical_frame"/>
+      <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+    </joint>
+
+    <!-- Gazebo ROS 2 Depth Plugin -->
+    <xacro:if value="${int(ros_version) == 2}">
+      <gazebo reference="${name}_link">
+        <sensor name="${name}_sensor" type="depth">
+          <always_on>true</always_on>
+          <update_rate>10.0</update_rate>
+          <camera>
+            <horizontal_fov>${fov}</horizontal_fov>
+            <image>
+              <width>${width}</width>
+              <height>${height}</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>${min_depth}</near>
+              <far>${max_depth}</far>
+            </clip>
+          </camera>
+          <plugin name="${name}_plugin" filename="libgazebo_ros_camera.so">
+            <ros>
+              <namespace>/</namespace>
+              <remapping>~/image_raw:=${name}/color/image_raw</remapping>
+              <remapping>~/depth/image_raw:=${name}/depth/image_raw</remapping>
+              <remapping>~/points:=${name}/points</remapping>
+
+              <!-- 針對 RGB 影像 Topic 停用壓縮與 theora 發佈器 -->
+              <parameter name="${name}.image_raw.disable_pub_plugins" type="string_array">image_transport/compressed_pub, image_transport/compressedDepth_pub, image_transport/theora_pub</parameter>
+              
+              <!-- 針對 Depth 影像 Topic 停用壓縮與 theora 發佈器 -->
+              <parameter name="${name}.depth.image_raw.disable_pub_plugins" type="string_array">image_transport/compressed_pub, image_transport/compressedDepth_pub, image_transport/theora_pub</parameter>
+            </ros>
+            <camera_name>${name}</camera_name>
+            <frame_name>${name}_optical_frame</frame_name>
+            <!-- 確保點雲包含 RGB 顏色資訊 -->
+            <min_depth>${min_depth}</min_depth>
+            <max_depth>${max_depth}</max_depth>
+          </plugin>
+        </sensor>
+      </gazebo>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- 實例化 8 顆相機 (FOV 以弧度表示: 87度=1.5184, 120.4度=2.1013) -->
+  <!-- 1. 前 -->
+  <xacro:depth_camera
+    name="cam_front" 
+    parent="base"
+    xyz="0.49539 0 0.105"
+    rpy="0 0 0"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.52"
+    max_depth="6.0"/>
+  
+  <!-- 2. 前下 -->
+  <xacro:depth_camera
+    name="cam_front_bottom"
+    parent="base"
+    xyz="0.485641 0 0.015"
+    rpy="0 0.7854 0"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.28"
+    max_depth="3.0"/>
+  
+  <!-- 3. 左下 -->
+  <xacro:depth_camera
+    name="cam_left_bottom"
+    parent="base"
+    xyz="0 0.121747 0.015"
+    rpy="0 0.7854 1.5708"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.28"
+    max_depth="3.0"/>
+  
+  <!-- 4. 右下 -->
+  <xacro:depth_camera
+    name="cam_right_bottom"
+    parent="base"
+    xyz="0 -0.121747 0.015"
+    rpy="0 0.7854 -1.5708"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.28"
+    max_depth="3.0"/>
+  
+  <!-- 5. 後 (e-con RGB, 賦予深度以產生測試用點雲) -->
+  <xacro:depth_camera
+    name="cam_rear"
+    parent="base"
+    xyz="-0.474 0 0.100"
+    rpy="0 0 3.1416"
+    width="640"
+    height="360"
+    fov="2.1013"
+    min_depth="0.1"
+    max_depth="10.0"/>
+  
+  <!-- 6. 後下 -->
+  <xacro:depth_camera
+    name="cam_rear_bottom"
+    parent="base"
+    xyz="-0.453192 0 0.015"
+    rpy="0 0.7854 3.1416"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.28"
+    max_depth="3.0"/>
+
+  <!-- 7. 腹部前 (D435/D405) -->
+  <!-- <xacro:depth_camera
+    name="cam_belly_front"
+    parent="base"
+    xyz="0.20 0 -0.145"
+    rpy="0 1.5708 0"
+    width="360"
+    height="640"
+    fov="1.012"
+    min_depth="0.07"
+    max_depth="1.0"/> -->
+
+  <!-- 8. 腹部後 (D435/D405) -->
+  <!-- <xacro:depth_camera
+    name="cam_belly_rear"
+    parent="base"
+    xyz="-0.25 0 -0.145"
+    rpy="0 1.5708 0"
+    width="360"
+    height="640"
+    fov="1.012"
+    min_depth="0.07"
+    max_depth="1.0"/> -->
+
+  <xacro:depth_camera
+    name="cam_outside"
+    parent="base"
+    xyz="-1.5 -1.0 0.60"
+    rpy="0 0.5 0.7"
+    width="640"
+    height="360"
+    fov="1.5184"
+    min_depth="0.1"
+    max_depth="8.0"/>
+
+</robot>

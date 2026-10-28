@@ -1,0 +1,25 @@
+# Large data / binaries -- full copies live in ~/Desktop/viplanner2_backups/*.tar.gz
+training_data/*/
+!training_data/tools/
+!training_data/combine_scene/
+!training_data/straight_stairs_scene/
+!training_data/l_shaped_stairs_scene/
+!training_data/data/
+training_data/*.log
+base_checkpoint/
+checkpoints/
+scenes/
+1013/**/meshes/
+*.zip
+*.7z
+*.tar.gz
+*.pt
+*.pth
+*.usd
+*.usdc
+*.usdz
+*.ply
+*.docx.bak
+__pycache__/
+*.pyc
+.claude/scheduled_tasks.lock

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<robot name="growin_description" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find growin_description)/urdf/growin_gazebo.urdf"/>
+    <xacro:include filename="$(find growin_description)/xacro/gazebo.xacro"/>
+    <!-- <xacro:include filename="$(find growin_description)/xacro/cameras_real.xacro"/> -->
+    <xacro:include filename="$(find growin_description)/xacro/cameras.xacro"/>
+
+</robot>
